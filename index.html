@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <title>我的定位</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 20px; }
+    button { margin: 5px 0; padding: 6px 10px; font-size: 14px; cursor: pointer; }
+    input { padding: 6px; font-size: 14px; }
+    .info { margin-top: 15px; }
+    table { border-collapse: collapse; margin-top: 20px; width: 100%; }
+    th, td { border: 1px solid #aaa; padding: 8px; text-align: left; }
+    .delete-btn { background: #e74c3c; color: white; border: none; border-radius: 4px; }
+    .delete-btn:hover { background: #c0392b; }
+    .edit-btn { background: #3498db; color: white; border: none; border-radius: 4px; }
+    .edit-btn:hover { background: #2980b9; }
+    .clear-btn { background: #f39c12; color: white; border: none; border-radius: 4px; }
+    .clear-btn:hover { background: #d35400; }
+  </style>
+</head>
+<body>
+  <h2>我的定位程式</h2>
+  
+  <button onclick="getLocation()">📍 我的定位</button>
+  
+  <div class="info">
+    <p><strong>地址：</strong><span id="address">尚未取得</span></p>
+    <p><strong>經度：</strong><span id="lng">-</span></p>
+    <p><strong>緯度：</strong><span id="lat">-</span></p>
+  </div>
+
+  <div class="info">
+    <label>店名：<input type="text" id="storeName" placeholder="請輸入店名"></label>
+  </div>
+  
+  <button onclick="addRecord()">➕ 加入清單</button>
+  <button onclick="exportCSV()">⬇ 匯出 CSV</button>
+  <button class="clear-btn" onclick="clearAll()">🗑 清空清單</button>
+
+  <h3>暫存清單</h3>
+  <table id="dataTable">
+    <thead>
+      <tr>
+        <th>店名</th>
+        <th>地址</th>
+        <th>經度</th>
+        <th>緯度</th>
+        <th>操作</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+  
+  <script>
+    let currentAddress = "";
+    let currentLat = "";
+    let currentLng = "";
+    let records = []; // 暫存資料
+
+    // 初始化：讀取 localStorage
+    window.onload = function() {
+      const saved = localStorage.getItem("records");
+      if (saved) {
+        records = JSON.parse(saved);
+        updateTable();
+      }
+    };
+
+    function saveToLocalStorage() {
+      localStorage.setItem("records", JSON.stringify(records));
+    }
+
+    function getLocation() {
+      if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(showPosition, showError);
+      } else {
+        alert("瀏覽器不支援定位功能");
+      }
+    }
+
+    function showPosition(position) {
+      currentLat = position.coords.latitude;
+      currentLng = position.coords.longitude;
+      document.getElementById("lat").innerText = currentLat;
+      document.getElementById("lng").innerText = currentLng;
+
+      // Google Maps Geocoding API (需金鑰)
+      fetch(`https://maps.googleapis.com/maps/api/geocode/json?latlng=${currentLat},${currentLng}&key=AIzaSyBH1BUgJopBHGDpvU6f9vGEE7U5DFeF8N4-g&language=zh-TW`)
+        .then(response => response.json())
+        .then(data => {
+          if (data.results.length > 0) {
+            currentAddress = data.results[0].formatted_address;
+            document.getElementById("address").innerText = currentAddress;
+          } else {
+            currentAddress = "找不到地址";
+            document.getElementById("address").innerText = currentAddress;
+          }
+        });
+    }
+
+    function showError(error) {
+      switch(error.code) {
+        case error.PERMISSION_DENIED:
+          alert("使用者拒絕了定位要求");
+          break;
+        case error.POSITION_UNAVAILABLE:
+          alert("無法取得位置資訊");
+          break;
+        case error.TIMEOUT:
+          alert("定位請求逾時");
+          break;
+        default:
+          alert("未知錯誤");
+          break;
+      }
+    }
+
+    function addRecord() {
+      const storeName = document.getElementById("storeName").value.trim();
+      if (!storeName) {
+        alert("請輸入店名！");
+        return;
+      }
+      if (!currentLat || !currentLng || !currentAddress) {
+        alert("請先按『我的定位』取得位置資訊！");
+        return;
+      }
+
+      const record = {
+        storeName,
+        address: currentAddress,
+        lng: currentLng,
+        lat: currentLat
+      };
+      records.push(record);
+      updateTable();
+      saveToLocalStorage();
+      document.getElementById("storeName").value = "";
+    }
+
+    function deleteRecord(index) {
+      records.splice(index, 1);
+      updateTable();
+      saveToLocalStorage();
+    }
+
+    function editRecord(index) {
+      const tbody = document.querySelector("#dataTable tbody");
+      const row = tbody.rows[index];
+      const record = records[index];
+
+      row.innerHTML = `
+        <td><input type="text" id="editName${index}" value="${record.storeName}"></td>
+        <td><input type="text" id="editAddr${index}" value="${record.address}"></td>
+        <td><input type="text" id="editLng${index}" value="${record.lng}"></td>
+        <td><input type="text" id="editLat${index}" value="${record.lat}"></td>
+        <td>
+          <button class="edit-btn" onclick="saveRecord(${index})">儲存</button>
+          <button class="delete-btn" onclick="deleteRecord(${index})">刪除</button>
+        </td>
+      `;
+    }
+
+    function saveRecord(index) {
+      const name = document.getElementById(`editName${index}`).value.trim();
+      const addr = document.getElementById(`editAddr${index}`).value.trim();
+      const lng = document.getElementById(`editLng${index}`).value.trim();
+      const lat = document.getElementById(`editLat${index}`).value.trim();
+
+      if (!name) {
+        alert("店名不可空白！");
+        return;
+      }
+
+      records[index] = { storeName: name, address: addr, lng, lat };
+      updateTable();
+      saveToLocalStorage();
+    }
+
+    function updateTable() {
+      const tbody = document.querySelector("#dataTable tbody");
+      tbody.innerHTML = "";
+      records.forEach((r, index) => {
+        const row = `<tr>
+                      <td>${r.storeName}</td>
+                      <td>${r.address}</td>
+                      <td>${r.lng}</td>
+                      <td>${r.lat}</td>
+                      <td>
+                        <button class="edit-btn" onclick="editRecord(${index})">編輯</button>
+                        <button class="delete-btn" onclick="deleteRecord(${index})">刪除</button>
+                      </td>
+                    </tr>`;
+        tbody.innerHTML += row;
+      });
+    }
+
+    function clearAll() {
+      if (records.length === 0) {
+        alert("清單已經是空的！");
+        return;
+      }
+      if (confirm("確定要清空所有資料嗎？這個動作無法復原！")) {
+        records = [];
+        updateTable();
+        saveToLocalStorage();
+      }
+    }
+
+    function exportCSV() {
+      if (records.length === 0) {
+        alert("目前沒有資料可以匯出！");
+        return;
+      }
+      let csvContent = "店名,地址,經度,緯度\n";
+      records.forEach(r => {
+        csvContent += `"${r.storeName}","${r.address}",${r.lng},${r.lat}\n`;
+      });
+
+      const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+      const link = document.createElement("a");
+      link.href = URL.createObjectURL(blob);
+      link.download = "娃娃機清單.csv";
+      link.click();
+    }
+  </script>
+</body>
+</html>
