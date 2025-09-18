@@ -12,46 +12,22 @@
   <meta charset="UTF-8">
   <title>娃娃機清單 App</title>
   <style>
-    body {
-      font-family: "Segoe UI", Arial, sans-serif;
-      margin: 0;
-      background: #f4f6f8;
-    }
-    header {
-      background: #2c3e50;
-      color: white;
-      padding: 15px 20px;
-      font-size: 20px;
-    }
+    body { font-family: "Segoe UI", Arial, sans-serif; margin: 0; background: #f4f6f8; }
+    header { background: #2c3e50; color: white; padding: 15px 20px; font-size: 20px; }
     .container {
-      max-width: 400px;
-      margin: 60px auto;
-      background: white;
-      padding: 30px;
-      border-radius: 12px;
+      max-width: 400px; margin: 60px auto; background: white;
+      padding: 30px; border-radius: 12px;
       box-shadow: 0 4px 12px rgba(0,0,0,0.1);
     }
-    h2 {
-      text-align: center;
-      margin-bottom: 20px;
-      color: #34495e;
-    }
+    h2 { text-align: center; margin-bottom: 20px; color: #34495e; }
     input {
-      width: 100%;
-      padding: 12px;
-      margin: 8px 0;
-      border: 1px solid #ccc;
-      border-radius: 6px;
-      font-size: 14px;
+      width: 100%; padding: 10px; margin: 6px 0;
+      border: 1px solid #ccc; border-radius: 6px; font-size: 14px;
     }
     button {
-      padding: 8px 12px;
-      margin: 4px;
-      border: none;
-      border-radius: 6px;
-      font-size: 14px;
-      cursor: pointer;
-      transition: 0.3s;
+      padding: 8px 12px; margin: 4px;
+      border: none; border-radius: 6px;
+      font-size: 14px; cursor: pointer; transition: 0.3s;
     }
     .btn-primary { background: #3498db; color: white; }
     .btn-primary:hover { background: #2980b9; }
@@ -61,33 +37,21 @@
     .btn-danger:hover { background: #c0392b; }
     .btn-warning { background: #f39c12; color: white; }
     .btn-warning:hover { background: #d68910; }
-
     #appSection {
-      display: none;
-      max-width: 900px;
-      margin: 30px auto;
-      background: white;
-      padding: 20px;
-      border-radius: 12px;
+      display: none; max-width: 1000px; margin: 30px auto;
+      background: white; padding: 20px; border-radius: 12px;
       box-shadow: 0 4px 12px rgba(0,0,0,0.1);
     }
-    table {
+    table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+    th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+    th { background: #f9fafb; }
+    input.inline-edit { width: 90%; padding: 5px; font-size: 13px; }
+    #map {
+      margin-top: 20px;
       width: 100%;
-      border-collapse: collapse;
-      margin-top: 15px;
-    }
-    th, td {
-      border: 1px solid #ddd;
-      padding: 10px;
-      text-align: left;
-    }
-    th {
-      background: #f9fafb;
-    }
-    input.inline-edit {
-      width: 90%;
-      padding: 5px;
-      font-size: 13px;
+      height: 400px;
+      border-radius: 12px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
     }
   </style>
 </head>
@@ -112,6 +76,7 @@
     <hr>
     <h3>我的清單</h3>
     <input type="text" id="storeName" placeholder="請輸入店名">
+    <input type="text" id="storeAddr" placeholder="請輸入地址">
     <button class="btn-primary" onclick="addRecord()">加入清單</button>
     <button class="btn-secondary" onclick="uploadData()">☁ 上傳到 Firebase</button>
 
@@ -119,6 +84,7 @@
       <thead>
         <tr>
           <th>店名</th>
+          <th>地址</th>
           <th>經度</th>
           <th>緯度</th>
           <th>操作</th>
@@ -126,29 +92,24 @@
       </thead>
       <tbody></tbody>
     </table>
+
+    <!-- 地圖 -->
+    <div id="map"></div>
   </div>
 
   <!-- Firebase SDK -->
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/9.17.1/firebase-app.js";
     import { 
-      getAuth, 
-      createUserWithEmailAndPassword, 
-      signInWithEmailAndPassword, 
-      signOut, 
-      onAuthStateChanged 
+      getAuth, createUserWithEmailAndPassword,
+      signInWithEmailAndPassword, signOut, onAuthStateChanged
     } from "https://www.gstatic.com/firebasejs/9.17.1/firebase-auth.js";
     import { 
-      getFirestore, 
-      collection, 
-      addDoc, 
-      getDocs, 
-      deleteDoc, 
-      updateDoc,
-      doc 
+      getFirestore, collection, addDoc, getDocs,
+      deleteDoc, updateDoc, doc
     } from "https://www.gstatic.com/firebasejs/9.17.1/firebase-firestore.js";
 
-    // ✅ Firebase 設定
+    // ✅ Firebase Config
     const firebaseConfig = {
       apiKey: "AIzaSyB1SOrDItdUUshN2DuijWjdEAbuNXGvY6A",
       authDomain: "clawmachine-68199.firebaseapp.com",
@@ -159,13 +120,16 @@
       measurementId: "G-NG3HXDQWCW"
     };
 
-    // 初始化 Firebase
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
     const db = getFirestore(app);
 
-    let records = []; // {id, storeName, lng, lat}
-    const authMessage = document.getElementById("authMessage");
+    // ✅ Google API Key
+    const GOOGLE_API_KEY = "AIzaSyBH1BUgJopBHGDpvU6f9vGEE7U5DFeF8N4";
+
+    let records = []; 
+    let map;
+    let markers = [];
 
     // ================= 認證 =================
     window.register = async function() {
@@ -173,11 +137,9 @@
       const password = document.getElementById("password").value;
       try {
         await createUserWithEmailAndPassword(auth, email, password);
-        authMessage.textContent = "✅ 註冊成功，請直接登入";
-        authMessage.style.color = "green";
+        alert("✅ 註冊成功，請登入");
       } catch (e) {
-        authMessage.textContent = "❌ 註冊失敗：" + e.code;
-        authMessage.style.color = "red";
+        alert("❌ 註冊失敗：" + e.code);
       }
     }
 
@@ -186,10 +148,8 @@
       const password = document.getElementById("password").value;
       try {
         await signInWithEmailAndPassword(auth, email, password);
-        authMessage.textContent = "";
       } catch (e) {
-        authMessage.textContent = "❌ 登錄失敗：" + e.code;
-        authMessage.style.color = "red";
+        alert("❌ 登錄失敗：" + e.code);
       }
     }
 
@@ -204,6 +164,7 @@
         document.getElementById("appSection").style.display = "block";
         document.getElementById("welcomeText").innerText = `歡迎回來，${user.email}`;
         await loadUserData(user.uid);
+        initMap();
       } else {
         document.getElementById("authSection").style.display = "block";
         document.getElementById("appSection").style.display = "none";
@@ -212,17 +173,38 @@
       }
     });
 
-    // ================= 清單功能 =================
-    window.addRecord = function() {
-      const storeName = document.getElementById("storeName").value.trim();
-      if (!storeName) return alert("請輸入店名！");
-      const lng = (Math.random() * 120).toFixed(6);
-      const lat = (Math.random() * 23).toFixed(6);
+    // ================= Google Maps Geocoding =================
+    async function getCoordinates(address) {
+      try {
+        const url = `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(address)}&key=${GOOGLE_API_KEY}`;
+        const res = await fetch(url);
+        const data = await res.json();
+        if (data.status === "OK") {
+          const location = data.results[0].geometry.location;
+          return { lng: location.lng, lat: location.lat };
+        } else {
+          throw new Error("Geocoding 失敗: " + data.status);
+        }
+      } catch (err) {
+        console.error("🔥 Geocoding 錯誤：", err);
+        alert("地址轉換經緯度失敗，請確認地址正確");
+        return { lng: 0, lat: 0 };
+      }
+    }
 
-      const record = { id: null, storeName, lng, lat }; 
+    // ================= 清單功能 =================
+    window.addRecord = async function() {
+      const storeName = document.getElementById("storeName").value.trim();
+      const storeAddr = document.getElementById("storeAddr").value.trim();
+      if (!storeName || !storeAddr) return alert("請輸入店名與地址！");
+
+      const { lng, lat } = await getCoordinates(storeAddr);
+      const record = { id: null, storeName, address: storeAddr, lng, lat }; 
       records.push(record);
       updateTable();
+      updateMap();
       document.getElementById("storeName").value = "";
+      document.getElementById("storeAddr").value = "";
     }
 
     function updateTable() {
@@ -231,16 +213,15 @@
       records.forEach((r, index) => {
         tbody.innerHTML += `
           <tr id="row-${r.id || index}">
-            <td>${r.id ? `<input class="inline-edit" id="name-${r.id}" value="${r.storeName}">` : r.storeName}</td>
-            <td>${r.id ? `<input class="inline-edit" id="lng-${r.id}" value="${r.lng}">` : r.lng}</td>
-            <td>${r.id ? `<input class="inline-edit" id="lat-${r.id}" value="${r.lat}">` : r.lat}</td>
+            <td>${r.storeName}</td>
+            <td>${r.address}</td>
+            <td>${r.lng}</td>
+            <td>${r.lat}</td>
             <td>
               ${r.id 
-                ? `
-                  <button class="btn-warning" onclick="saveRecord('${r.id}')">儲存</button>
-                  <button class="btn-danger" onclick="deleteRecord('${r.id}')">刪除</button>
-                `
-                : `<span style="color:gray;">尚未上傳</span>`}
+                ? `<button class="btn-warning" onclick="saveRecord('${r.id}')">儲存</button>
+                   <button class="btn-danger" onclick="deleteRecord('${r.id}')">刪除</button>`
+                : `<button class="btn-danger" onclick="deleteLocalRecord(${index})">刪除</button>`}
             </td>
           </tr>`;
       });
@@ -251,68 +232,65 @@
       if (!user) return alert("請先登入！");
       try {
         for (let r of records) {
-          if (!r.id) { // 只上傳新的
-            const docRef = await addDoc(collection(db, "users", user.uid, "stores"), {
-              storeName: r.storeName,
-              lng: r.lng,
-              lat: r.lat
-            });
+          if (!r.id) {  
+            const docRef = await addDoc(collection(db, "users", user.uid, "stores"), r);
             r.id = docRef.id;
           }
         }
         alert("清單已成功上傳！");
         updateTable();
+        updateMap();
       } catch (e) {
+        console.error("🔥 Firestore 上傳錯誤：", e);
         alert("上傳失敗：" + e.message);
       }
     }
 
     async function loadUserData(uid) {
-      records = [];
-      const querySnapshot = await getDocs(collection(db, "users", uid, "stores"));
-      querySnapshot.forEach((docSnap) => {
-        records.push({ id: docSnap.id, ...docSnap.data() });
-      });
-      updateTable();
-    }
-
-    window.deleteRecord = async function(recordId) {
-      const user = auth.currentUser;
-      if (!user) return alert("請先登入！");
-      if (!confirm("確定要刪除這筆資料嗎？")) return;
-
       try {
-        await deleteDoc(doc(db, "users", user.uid, "stores", recordId));
-        records = records.filter(r => r.id !== recordId);
+        records = [];
+        const querySnapshot = await getDocs(collection(db, "users", uid, "stores"));
+        querySnapshot.forEach((docSnap) => {
+          records.push({ id: docSnap.id, ...docSnap.data() });
+        });
         updateTable();
-        alert("刪除成功！");
+        updateMap();
       } catch (e) {
-        alert("刪除失敗：" + e.message);
+        console.error("🔥 Firestore 載入錯誤：", e);
       }
     }
 
-    // ================= Inline 編輯 =================
-    window.saveRecord = async function(recordId) {
-      const user = auth.currentUser;
-      if (!user) return alert("請先登入！");
+    // ================= 地圖功能 =================
+    window.initMap = function() {
+      map = new google.maps.Map(document.getElementById("map"), {
+        center: { lat: 22.6273, lng: 120.3014 }, // 高雄市
+        zoom: 12
+      });
+      updateMap();
+    }
 
-      const newName = document.getElementById(`name-${recordId}`).value;
-      const newLng = document.getElementById(`lng-${recordId}`).value;
-      const newLat = document.getElementById(`lat-${recordId}`).value;
-
-      try {
-        const ref = doc(db, "users", user.uid, "stores", recordId);
-        await updateDoc(ref, { storeName: newName, lng: newLng, lat: newLat });
-
-        const idx = records.findIndex(r => r.id === recordId);
-        if (idx > -1) {
-          records[idx] = { id: recordId, storeName: newName, lng: newLng, lat: newLat };
+    function updateMap() {
+      if (!map) return;
+      markers.forEach(m => m.setMap(null));
+      markers = [];
+      records.forEach(r => {
+        if (r.lat && r.lng) {
+          const marker = new google.maps.Marker({
+            position: { lat: parseFloat(r.lat), lng: parseFloat(r.lng) },
+            map,
+            title: r.storeName
+          });
+          const info = new google.maps.InfoWindow({
+            content: `<b>${r.storeName}</b><br>${r.address}`
+          });
+          marker.addListener("click", () => info.open(map, marker));
+          markers.push(marker);
         }
-        alert("更新成功！");
-      } catch (e) {
-        alert("更新失敗：" + e.message);
-      }
+      });
     }
   </script>
+
+  <!-- 載入 Google Maps SDK -->
+  <script async defer src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBH1BUgJopBHGDpvU6f9vGEE7U5DFeF8N4&callback=initMap"></script>
 </body>
 </html>
