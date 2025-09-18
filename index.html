@@ -10,7 +10,7 @@
   gtag('config', 'G-65GTWZKRV5');
 </script>
   <meta charset="UTF-8">
-  <title>娃娃機清單（專業版 CSV）</title>
+  <title>娃娃機清單（CSV版）</title>
   <style>
     body { font-family: "Segoe UI", Arial, sans-serif; margin: 0; background: #f4f6f8; }
     header { background: #2c3e50; color: white; padding: 15px 20px; font-size: 20px; }
@@ -32,33 +32,28 @@
       border: 1px solid #ccc; border-radius: 8px;
     }
 
-    /* 漂亮按鈕 */
+    /* 按鈕 */
     button {
       width: 100%; padding: 12px; margin: 8px 0;
       border: none; border-radius: 8px; font-size: 15px;
       cursor: pointer; transition: all 0.3s ease;
       font-weight: bold;
     }
-    .btn-primary {
-      background: linear-gradient(135deg, #3498db, #2980b9);
-      color: white;
-    }
+    .btn-primary { background: linear-gradient(135deg, #3498db, #2980b9); color: white; }
     .btn-primary:hover { box-shadow: 0 4px 12px rgba(52,152,219,0.6); }
-    .btn-secondary {
-      background: linear-gradient(135deg, #2ecc71, #27ae60);
-      color: white;
-    }
+    .btn-secondary { background: linear-gradient(135deg, #2ecc71, #27ae60); color: white; }
     .btn-secondary:hover { box-shadow: 0 4px 12px rgba(46,204,113,0.6); }
-    .btn-danger {
-      background: linear-gradient(135deg, #e74c3c, #c0392b);
-      color: white;
-    }
+    .btn-danger { background: linear-gradient(135deg, #e74c3c, #c0392b); color: white; }
     .btn-danger:hover { box-shadow: 0 4px 12px rgba(231,76,60,0.6); }
-    .btn-success {
-      background: linear-gradient(135deg, #f39c12, #d35400);
-      color: white;
-    }
+    .btn-success { background: linear-gradient(135deg, #f39c12, #d35400); color: white; }
     .btn-success:hover { box-shadow: 0 4px 12px rgba(243,156,18,0.6); }
+
+    /* 小按鈕 */
+    .btn-small {
+      width: auto;
+      padding: 8px 14px;
+      font-size: 14px;
+    }
 
     .auth-message { margin-top: 15px; font-size: 14px; color: red; }
 
@@ -101,7 +96,7 @@
   <div class="app-wrapper" id="appSection" style="display:none;">
     <div class="app-header">
       <h2 id="welcomeText">歡迎！</h2>
-      <button class="btn-danger" onclick="logout()">登出</button>
+      <button class="btn-danger btn-small" onclick="logout()">登出</button>
     </div>
 
     <div class="app-card">
@@ -206,7 +201,7 @@
           <td>${r.storeName}</td>
           <td>${r.storeAddr}</td>
           <td>${r.storeTime}</td>
-          <td><button class="btn-danger" onclick="deleteRecord(${r.id})">刪除</button></td>
+          <td><button class="btn-danger btn-small" onclick="deleteRecord(${r.id})">刪除</button></td>
         </tr>`).join("");
     }
 
@@ -242,11 +237,13 @@
     };
 
     // ================= Google Maps =================
-    window.initMap = () => {
+    window.initMap = function () {
       map = new google.maps.Map(document.getElementById("map"), {
         center: { lat: 22.6273, lng: 120.3014 }, zoom: 12
       });
+      updateMap();
     };
+
     function updateMap() {
       if (!map) return;
       markers.forEach(m => m.setMap(null)); markers = [];
