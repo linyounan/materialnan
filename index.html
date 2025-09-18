@@ -78,7 +78,6 @@
     <input type="text" id="storeName" placeholder="請輸入店名">
     <input type="text" id="storeAddr" placeholder="請輸入地址">
     <button class="btn-primary" onclick="addRecord()">加入清單</button>
-    <button class="btn-secondary" onclick="uploadData()">☁ 上傳到 Firebase</button>
 
     <table id="dataTable">
       <thead>
@@ -194,15 +193,30 @@
 
     // ================= 清單功能 =================
     window.addRecord = async function() {
+      const user = auth.currentUser;
+      if (!user) return alert("請先登入！");
+
       const storeName = document.getElementById("storeName").value.trim();
       const storeAddr = document.getElementById("storeAddr").value.trim();
       if (!storeName || !storeAddr) return alert("請輸入店名與地址！");
 
       const { lng, lat } = await getCoordinates(storeAddr);
-      const record = { id: null, storeName, address: storeAddr, lng, lat }; 
-      records.push(record);
-      updateTable();
-      updateMap();
+
+      try {
+        // 直接存進 Firestore
+        const docRef = await addDoc(collection(db, "users", user.uid, "stores"), {
+          storeName, address: storeAddr, lng, lat
+        });
+        const record = { id: docRef.id, storeName, address: storeAddr, lng, lat };
+        records.push(record);
+        updateTable();
+        updateMap();
+        alert("✅ 已加入並同步到 Firebase！");
+      } catch (e) {
+        console.error("🔥 Firestore 新增錯誤：", e);
+        alert("新增失敗：" + e.message);
+      }
+
       document.getElementById("storeName").value = "";
       document.getElementById("storeAddr").value = "";
     }
@@ -210,40 +224,19 @@
     function updateTable() {
       const tbody = document.querySelector("#dataTable tbody");
       tbody.innerHTML = "";
-      records.forEach((r, index) => {
+      records.forEach((r) => {
         tbody.innerHTML += `
-          <tr id="row-${r.id || index}">
-            <td>${r.storeName}</td>
-            <td>${r.address}</td>
-            <td>${r.lng}</td>
-            <td>${r.lat}</td>
+          <tr id="row-${r.id}">
+            <td><input class="inline-edit" id="name-${r.id}" value="${r.storeName}"></td>
+            <td><input class="inline-edit" id="addr-${r.id}" value="${r.address}"></td>
+            <td><input class="inline-edit" id="lng-${r.id}" value="${r.lng}"></td>
+            <td><input class="inline-edit" id="lat-${r.id}" value="${r.lat}"></td>
             <td>
-              ${r.id 
-                ? `<button class="btn-warning" onclick="saveRecord('${r.id}')">儲存</button>
-                   <button class="btn-danger" onclick="deleteRecord('${r.id}')">刪除</button>`
-                : `<button class="btn-danger" onclick="deleteLocalRecord(${index})">刪除</button>`}
+              <button class="btn-warning" onclick="saveRecord('${r.id}')">儲存</button>
+              <button class="btn-danger" onclick="deleteRecord('${r.id}')">刪除</button>
             </td>
           </tr>`;
       });
-    }
-
-    window.uploadData = async function() {
-      const user = auth.currentUser;
-      if (!user) return alert("請先登入！");
-      try {
-        for (let r of records) {
-          if (!r.id) {  
-            const docRef = await addDoc(collection(db, "users", user.uid, "stores"), r);
-            r.id = docRef.id;
-          }
-        }
-        alert("清單已成功上傳！");
-        updateTable();
-        updateMap();
-      } catch (e) {
-        console.error("🔥 Firestore 上傳錯誤：", e);
-        alert("上傳失敗：" + e.message);
-      }
     }
 
     async function loadUserData(uid) {
@@ -257,6 +250,45 @@
         updateMap();
       } catch (e) {
         console.error("🔥 Firestore 載入錯誤：", e);
+      }
+    }
+
+    window.deleteRecord = async function(recordId) {
+      const user = auth.currentUser;
+      if (!user) return alert("請先登入！");
+      if (!confirm("確定要刪除這筆資料嗎？")) return;
+
+      try {
+        await deleteDoc(doc(db, "users", user.uid, "stores", recordId));
+        records = records.filter(r => r.id !== recordId);
+        updateTable();
+        updateMap();
+        alert("刪除成功！");
+      } catch (e) {
+        console.error("🔥 Firestore 刪除錯誤：", e);
+        alert("刪除失敗：" + e.message);
+      }
+    }
+
+    window.saveRecord = async function(recordId) {
+      const user = auth.currentUser;
+      if (!user) return alert("請先登入！");
+      const newName = document.getElementById(`name-${recordId}`).value;
+      const newAddr = document.getElementById(`addr-${recordId}`).value;
+      const newLng = document.getElementById(`lng-${recordId}`).value;
+      const newLat = document.getElementById(`lat-${recordId}`).value;
+
+      try {
+        const ref = doc(db, "users", user.uid, "stores", recordId);
+        await updateDoc(ref, { storeName: newName, address: newAddr, lng: newLng, lat: newLat });
+        const idx = records.findIndex(r => r.id === recordId);
+        if (idx > -1) {
+          records[idx] = { id: recordId, storeName: newName, address: newAddr, lng: newLng, lat: newLat };
+        }
+        alert("更新成功！");
+      } catch (e) {
+        console.error("🔥 Firestore 更新錯誤：", e);
+        alert("更新失敗：" + e.message);
       }
     }
 
