@@ -45,12 +45,11 @@
       font-size: 14px;
     }
     button {
-      width: 100%;
-      padding: 12px;
-      margin: 8px 0;
+      padding: 8px 12px;
+      margin: 4px;
       border: none;
       border-radius: 6px;
-      font-size: 15px;
+      font-size: 14px;
       cursor: pointer;
       transition: 0.3s;
     }
@@ -60,10 +59,12 @@
     .btn-secondary:hover { background: #27ae60; }
     .btn-danger { background: #e74c3c; color: white; }
     .btn-danger:hover { background: #c0392b; }
+    .btn-warning { background: #f39c12; color: white; }
+    .btn-warning:hover { background: #d68910; }
 
     #appSection {
       display: none;
-      max-width: 800px;
+      max-width: 900px;
       margin: 30px auto;
       background: white;
       padding: 20px;
@@ -83,6 +84,11 @@
     th {
       background: #f9fafb;
     }
+    input.inline-edit {
+      width: 90%;
+      padding: 5px;
+      font-size: 13px;
+    }
   </style>
 </head>
 <body>
@@ -95,6 +101,7 @@
     <input type="password" id="password" placeholder="輸入密碼">
     <button class="btn-primary" onclick="login()">登入</button>
     <button class="btn-secondary" onclick="register()">註冊新帳號</button>
+    <p id="authMessage" style="color:red; text-align:center;"></p>
   </div>
 
   <!-- 主功能區 -->
@@ -114,6 +121,7 @@
           <th>店名</th>
           <th>經度</th>
           <th>緯度</th>
+          <th>操作</th>
         </tr>
       </thead>
       <tbody></tbody>
@@ -123,55 +131,73 @@
   <!-- Firebase SDK -->
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/9.17.1/firebase-app.js";
-    import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.17.1/firebase-auth.js";
-    import { getFirestore, collection, addDoc, getDocs } from "https://www.gstatic.com/firebasejs/9.17.1/firebase-firestore.js";
+    import { 
+      getAuth, 
+      createUserWithEmailAndPassword, 
+      signInWithEmailAndPassword, 
+      signOut, 
+      onAuthStateChanged 
+    } from "https://www.gstatic.com/firebasejs/9.17.1/firebase-auth.js";
+    import { 
+      getFirestore, 
+      collection, 
+      addDoc, 
+      getDocs, 
+      deleteDoc, 
+      updateDoc,
+      doc 
+    } from "https://www.gstatic.com/firebasejs/9.17.1/firebase-firestore.js";
 
+    // ✅ Firebase 設定
     const firebaseConfig = {
-      apiKey: "你的API_KEY",
-      authDomain: "你的專案.firebaseapp.com",
-      projectId: "你的專案ID",
-      storageBucket: "你的專案.appspot.com",
-      messagingSenderId: "發送ID",
-      appId: "APP ID"
+      apiKey: "AIzaSyB1SOrDItdUUshN2DuijWjdEAbuNXGvY6A",
+      authDomain: "clawmachine-68199.firebaseapp.com",
+      projectId: "clawmachine-68199",
+      storageBucket: "clawmachine-68199.appspot.com",
+      messagingSenderId: "416551705279",
+      appId: "1:416551705279:web:3ba72ebcc992da5f78440a",
+      measurementId: "G-NG3HXDQWCW"
     };
 
+    // 初始化 Firebase
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
     const db = getFirestore(app);
 
-    let records = [];
+    let records = []; // {id, storeName, lng, lat}
+    const authMessage = document.getElementById("authMessage");
 
-    // 註冊
+    // ================= 認證 =================
     window.register = async function() {
       const email = document.getElementById("email").value;
       const password = document.getElementById("password").value;
       try {
         await createUserWithEmailAndPassword(auth, email, password);
-        alert("註冊成功！");
+        authMessage.textContent = "✅ 註冊成功，請直接登入";
+        authMessage.style.color = "green";
       } catch (e) {
-        alert("註冊失敗：" + e.message);
+        authMessage.textContent = "❌ 註冊失敗：" + e.code;
+        authMessage.style.color = "red";
       }
     }
 
-    // 登錄
     window.login = async function() {
       const email = document.getElementById("email").value;
       const password = document.getElementById("password").value;
       try {
         await signInWithEmailAndPassword(auth, email, password);
-        alert("登入成功！");
+        authMessage.textContent = "";
       } catch (e) {
-        alert("登入失敗：" + e.message);
+        authMessage.textContent = "❌ 登錄失敗：" + e.code;
+        authMessage.style.color = "red";
       }
     }
 
-    // 登出
     window.logout = async function() {
       await signOut(auth);
       alert("已登出");
     }
 
-    // 登錄狀態切換
     onAuthStateChanged(auth, async (user) => {
       if (user) {
         document.getElementById("authSection").style.display = "none";
@@ -186,14 +212,14 @@
       }
     });
 
-    // 加入清單
+    // ================= 清單功能 =================
     window.addRecord = function() {
       const storeName = document.getElementById("storeName").value.trim();
       if (!storeName) return alert("請輸入店名！");
       const lng = (Math.random() * 120).toFixed(6);
       const lat = (Math.random() * 23).toFixed(6);
 
-      const record = { storeName, lng, lat };
+      const record = { id: null, storeName, lng, lat }; 
       records.push(record);
       updateTable();
       document.getElementById("storeName").value = "";
@@ -202,36 +228,90 @@
     function updateTable() {
       const tbody = document.querySelector("#dataTable tbody");
       tbody.innerHTML = "";
-      records.forEach(r => {
-        tbody.innerHTML += `<tr><td>${r.storeName}</td><td>${r.lng}</td><td>${r.lat}</td></tr>`;
+      records.forEach((r, index) => {
+        tbody.innerHTML += `
+          <tr id="row-${r.id || index}">
+            <td>${r.id ? `<input class="inline-edit" id="name-${r.id}" value="${r.storeName}">` : r.storeName}</td>
+            <td>${r.id ? `<input class="inline-edit" id="lng-${r.id}" value="${r.lng}">` : r.lng}</td>
+            <td>${r.id ? `<input class="inline-edit" id="lat-${r.id}" value="${r.lat}">` : r.lat}</td>
+            <td>
+              ${r.id 
+                ? `
+                  <button class="btn-warning" onclick="saveRecord('${r.id}')">儲存</button>
+                  <button class="btn-danger" onclick="deleteRecord('${r.id}')">刪除</button>
+                `
+                : `<span style="color:gray;">尚未上傳</span>`}
+            </td>
+          </tr>`;
       });
     }
 
-    // 上傳到 Firebase
     window.uploadData = async function() {
       const user = auth.currentUser;
       if (!user) return alert("請先登入！");
       try {
         for (let r of records) {
-          await addDoc(collection(db, "users", user.uid, "stores"), r);
+          if (!r.id) { // 只上傳新的
+            const docRef = await addDoc(collection(db, "users", user.uid, "stores"), {
+              storeName: r.storeName,
+              lng: r.lng,
+              lat: r.lat
+            });
+            r.id = docRef.id;
+          }
         }
         alert("清單已成功上傳！");
-        records = [];
         updateTable();
-        await loadUserData(user.uid);
       } catch (e) {
         alert("上傳失敗：" + e.message);
       }
     }
 
-    // 從 Firestore 載入
     async function loadUserData(uid) {
       records = [];
       const querySnapshot = await getDocs(collection(db, "users", uid, "stores"));
-      querySnapshot.forEach((doc) => {
-        records.push(doc.data());
+      querySnapshot.forEach((docSnap) => {
+        records.push({ id: docSnap.id, ...docSnap.data() });
       });
       updateTable();
+    }
+
+    window.deleteRecord = async function(recordId) {
+      const user = auth.currentUser;
+      if (!user) return alert("請先登入！");
+      if (!confirm("確定要刪除這筆資料嗎？")) return;
+
+      try {
+        await deleteDoc(doc(db, "users", user.uid, "stores", recordId));
+        records = records.filter(r => r.id !== recordId);
+        updateTable();
+        alert("刪除成功！");
+      } catch (e) {
+        alert("刪除失敗：" + e.message);
+      }
+    }
+
+    // ================= Inline 編輯 =================
+    window.saveRecord = async function(recordId) {
+      const user = auth.currentUser;
+      if (!user) return alert("請先登入！");
+
+      const newName = document.getElementById(`name-${recordId}`).value;
+      const newLng = document.getElementById(`lng-${recordId}`).value;
+      const newLat = document.getElementById(`lat-${recordId}`).value;
+
+      try {
+        const ref = doc(db, "users", user.uid, "stores", recordId);
+        await updateDoc(ref, { storeName: newName, lng: newLng, lat: newLat });
+
+        const idx = records.findIndex(r => r.id === recordId);
+        if (idx > -1) {
+          records[idx] = { id: recordId, storeName: newName, lng: newLng, lat: newLat };
+        }
+        alert("更新成功！");
+      } catch (e) {
+        alert("更新失敗：" + e.message);
+      }
     }
   </script>
 </body>
