@@ -10,7 +10,7 @@
   gtag('config', 'G-65GTWZKRV5');
 </script>
   <meta charset="UTF-8">
-  <title>娃娃機清單（CSV版）</title>
+  <title>娃娃機清單（專業版）</title>
   <style>
     body { font-family: "Segoe UI", Arial, sans-serif; margin: 0; background: #f4f6f8; }
     header { background: #2c3e50; color: white; padding: 15px 20px; font-size: 20px; }
@@ -40,20 +40,10 @@
       font-weight: bold;
     }
     .btn-primary { background: linear-gradient(135deg, #3498db, #2980b9); color: white; }
-    .btn-primary:hover { box-shadow: 0 4px 12px rgba(52,152,219,0.6); }
     .btn-secondary { background: linear-gradient(135deg, #2ecc71, #27ae60); color: white; }
-    .btn-secondary:hover { box-shadow: 0 4px 12px rgba(46,204,113,0.6); }
     .btn-danger { background: linear-gradient(135deg, #e74c3c, #c0392b); color: white; }
-    .btn-danger:hover { box-shadow: 0 4px 12px rgba(231,76,60,0.6); }
     .btn-success { background: linear-gradient(135deg, #f39c12, #d35400); color: white; }
-    .btn-success:hover { box-shadow: 0 4px 12px rgba(243,156,18,0.6); }
-
-    /* 小按鈕 */
-    .btn-small {
-      width: auto;
-      padding: 8px 14px;
-      font-size: 14px;
-    }
+    .btn-small { width: auto; padding: 6px 12px; font-size: 13px; }
 
     .auth-message { margin-top: 15px; font-size: 14px; color: red; }
 
@@ -110,7 +100,7 @@
         <input type="text" id="storeAddr" placeholder="請輸入地址">
       </div>
       <button class="btn-primary" onclick="addRecord()">儲存</button>
-      <button class="btn-success" onclick="exportData()">匯出 CSV</button>
+      <button class="btn-success" onclick="exportCSV()">匯出 CSV</button>
     </div>
 
     <div class="app-card">
@@ -121,6 +111,8 @@
             <th>店名</th>
             <th>地址</th>
             <th>時間</th>
+            <th>經度</th>
+            <th>緯度</th>
             <th>操作</th>
           </tr>
         </thead>
@@ -138,7 +130,7 @@
     import { initializeApp } from "https://www.gstatic.com/firebasejs/9.17.1/firebase-app.js";
     import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.17.1/firebase-auth.js";
 
-    // Firebase Config
+    // Firebase 設定
     const firebaseConfig = {
       apiKey: "AIzaSyB1SOrDItdUUshN2DuijWjdEAbuNXGvY6A",
       authDomain: "clawmachine-68199.firebaseapp.com",
@@ -150,10 +142,21 @@
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
 
-    const GOOGLE_API_KEY = "AIzaSyBH1BUgJopBHGDpvU6f9vGEE7U5DFeF8N4";
-    let records = [], map, markers = [];
+    let currentUser = "guest";
+    onAuthStateChanged(auth, (user) => {
+      if (user && user.email) {
+        currentUser = user.email;
+        authSection.style.display = "none";
+        appSection.style.display = "block";
+        welcomeText.innerText = `歡迎回來，${user.email}`;
+      } else {
+        currentUser = "guest";
+        authSection.style.display = "flex";
+        appSection.style.display = "none";
+      }
+    });
 
-    // ================= 認證 =================
+    // ===== 登錄相關 =====
     window.register = async () => {
       try { await createUserWithEmailAndPassword(auth, email.value, password.value);
         authMessage.textContent = "✅ 註冊成功，請登入"; }
@@ -165,93 +168,109 @@
     };
     window.logout = async () => { await signOut(auth); };
 
-    onAuthStateChanged(auth, (user) => {
-      if (user) {
-        authSection.style.display = "none";
-        appSection.style.display = "block";
-        welcomeText.innerText = `歡迎回來，${user.email}`;
-        loadFromLocal();
-      } else {
-        authSection.style.display = "flex";
-        appSection.style.display = "none";
-        loadFromLocal(); // guest 也能用
+    // ===== 主程式 =====
+    let records = [];
+    let map, markers = [];
+    const GOOGLE_API_KEY = "AIzaSyBH1BUgJopBHGDpvU6f9vGEE7U5DFeF8N4";
+
+    // 新增紀錄
+    window.addRecord = async function () {
+      const nameInput = document.getElementById("storeName");
+      const addrInput = document.getElementById("storeAddr");
+
+      const name = nameInput.value.trim();
+      const addr = addrInput.value.trim();
+      if (!name || !addr) {
+        alert("請輸入店名與地址！");
+        return;
       }
-    });
 
-    // ================= 本地清單 =================
-    async function addRecord() {
-      const name = storeName.value.trim();
-      const addr = storeAddr.value.trim();
-      if (!name || !addr) return alert("請輸入店名與地址！");
-
-      // 自動加時間
       const now = new Date();
       const time = now.toLocaleString("zh-TW", { hour12: false });
 
       const { lng, lat } = await getCoordinates(addr);
+
       const record = { id: Date.now(), storeName: name, storeAddr: addr, storeTime: time, lng, lat };
       records.push(record);
-      saveToLocal(); updateTable(); updateMap();
-      storeName.value = ""; storeAddr.value = "";
-    }
+      updateTable();
+      updateMap();
 
+      nameInput.value = "";
+      addrInput.value = "";
+    };
+
+    // 更新表格
     function updateTable() {
-      dataTable.querySelector("tbody").innerHTML = records.map(r => `
-        <tr>
+      const tbody = document.querySelector("#dataTable tbody");
+      tbody.innerHTML = "";
+
+      records.forEach(r => {
+        const row = document.createElement("tr");
+        row.innerHTML = `
           <td>${r.storeName}</td>
           <td>${r.storeAddr}</td>
           <td>${r.storeTime}</td>
+          <td>${r.lng}</td>
+          <td>${r.lat}</td>
           <td><button class="btn-danger btn-small" onclick="deleteRecord(${r.id})">刪除</button></td>
-        </tr>`).join("");
+        `;
+        tbody.appendChild(row);
+      });
     }
 
-    window.deleteRecord = (id) => {
-      if (!confirm("確定要刪除嗎？")) return;
+    // 刪除紀錄
+    window.deleteRecord = function (id) {
       records = records.filter(r => r.id !== id);
-      saveToLocal(); updateTable(); updateMap();
-    };
-
-    function saveToLocal() {
-      const key = auth.currentUser ? "clawStores_" + auth.currentUser.uid : "clawStores_guest";
-      localStorage.setItem(key, JSON.stringify(records));
-    }
-    function loadFromLocal() {
-      const key = auth.currentUser ? "clawStores_" + auth.currentUser.uid : "clawStores_guest";
-      const saved = localStorage.getItem(key);
-      records = saved ? JSON.parse(saved) : [];
-      updateTable(); updateMap();
-    }
-
-    // ================= 匯出 CSV =================
-    window.exportData = () => {
-      if (records.length === 0) return alert("沒有資料可匯出！");
-      let csv = "店名,地址,時間,經度,緯度\n";
-      records.forEach(r => {
-        csv += `"${r.storeName}","${r.storeAddr}","${r.storeTime}",${r.lng},${r.lat}\n`;
-      });
-      const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url; a.download = "clawStores.csv"; a.click();
-      URL.revokeObjectURL(url);
-    };
-
-    // ================= Google Maps =================
-    window.initMap = function () {
-      map = new google.maps.Map(document.getElementById("map"), {
-        center: { lat: 22.6273, lng: 120.3014 }, zoom: 12
-      });
+      updateTable();
       updateMap();
     };
 
+    // 匯出 CSV + 確認 + 自清空
+    window.exportCSV = function () {
+      if (records.length === 0) {
+        alert("沒有資料可匯出！");
+        return;
+      }
+      if (!confirm("⚠️ 確認要匯出並清空清單嗎？")) return;
+
+      let csv = `帳號,${currentUser}\n店名,地址,時間,經度,緯度\n`;
+      records.forEach(r => {
+        csv += `"${r.storeName}","${r.storeAddr}","${r.storeTime}",${r.lng},${r.lat}\n`;
+      });
+
+      const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "clawStores.csv";
+      a.click();
+      URL.revokeObjectURL(url);
+
+      records = [];
+      updateTable();
+      updateMap();
+    };
+
+    // Google 地圖初始化
+    window.initMap = function () {
+      map = new google.maps.Map(document.getElementById("map"), {
+        center: { lat: 22.6273, lng: 120.3014 },
+        zoom: 12
+      });
+    };
+
+    // 更新地圖標記
     function updateMap() {
       if (!map) return;
-      markers.forEach(m => m.setMap(null)); markers = [];
+      markers.forEach(m => m.setMap(null));
+      markers = [];
+
       records.forEach(r => {
         if (r.lat && r.lng) {
           const marker = new google.maps.Marker({
             position: { lat: parseFloat(r.lat), lng: parseFloat(r.lng) },
-            map, title: r.storeName
+            map,
+            title: r.storeName
           });
           const info = new google.maps.InfoWindow({
             content: `<b>${r.storeName}</b><br>${r.storeAddr}<br>🕒 ${r.storeTime}`
@@ -262,12 +281,19 @@
       });
     }
 
+    // Google API 取經緯度
     async function getCoordinates(address) {
       try {
-        const res = await fetch(`https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(address)}&key=${GOOGLE_API_KEY}`);
+        const res = await fetch(
+          `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(address)}&key=${GOOGLE_API_KEY}`
+        );
         const data = await res.json();
-        if (data.status === "OK") return data.results[0].geometry.location;
-      } catch (err) { console.error(err); }
+        if (data.status === "OK") {
+          return data.results[0].geometry.location;
+        }
+      } catch (err) {
+        console.error(err);
+      }
       return { lng: 0, lat: 0 };
     }
   </script>
