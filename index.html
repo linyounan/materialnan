@@ -10,7 +10,7 @@
   gtag('config', 'G-65GTWZKRV5');
 </script>
   <meta charset="UTF-8">
-  <title>娃娃機清單（專業版）</title>
+  <title>娃娃機清單（專業版）v2.0</title>
   <style>
     body { font-family: "Segoe UI", Arial, sans-serif; margin: 0; background: #f4f6f8; }
     header { background: #2c3e50; color: white; padding: 15px 20px; font-size: 20px; }
@@ -154,6 +154,7 @@
         authSection.style.display = "flex";
         appSection.style.display = "none";
       }
+      loadFromLocal(); // 登入/登出後都會重新讀取暫存
     });
 
     // ===== 登錄相關 =====
@@ -192,6 +193,7 @@
 
       const record = { id: Date.now(), storeName: name, storeAddr: addr, storeTime: time, lng, lat };
       records.push(record);
+      saveToLocal();
       updateTable();
       updateMap();
 
@@ -221,6 +223,7 @@
     // 刪除紀錄
     window.deleteRecord = function (id) {
       records = records.filter(r => r.id !== id);
+      saveToLocal();
       updateTable();
       updateMap();
     };
@@ -246,10 +249,23 @@
       a.click();
       URL.revokeObjectURL(url);
 
+      // 匯出後清空
       records = [];
+      saveToLocal();
       updateTable();
       updateMap();
     };
+
+    // 暫存功能
+    function saveToLocal() {
+      localStorage.setItem("clawStores", JSON.stringify(records));
+    }
+    function loadFromLocal() {
+      const saved = localStorage.getItem("clawStores");
+      records = saved ? JSON.parse(saved) : [];
+      updateTable();
+      updateMap();
+    }
 
     // Google 地圖初始化
     window.initMap = function () {
@@ -257,6 +273,7 @@
         center: { lat: 22.6273, lng: 120.3014 },
         zoom: 12
       });
+      updateMap();
     };
 
     // 更新地圖標記
