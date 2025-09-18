@@ -15,7 +15,7 @@
     body { font-family: "Segoe UI", Arial, sans-serif; margin: 0; background: #f4f6f8; }
     header { background: #2c3e50; color: white; padding: 15px 20px; font-size: 20px; }
 
-    /* 登錄頁面 */
+    /* 登錄頁 */
     .auth-wrapper {
       display: flex; justify-content: center; align-items: center;
       height: 100vh; background: linear-gradient(135deg, #3498db, #8e44ad);
@@ -53,6 +53,12 @@
       background: white; padding: 20px; margin-bottom: 20px;
       border-radius: 16px; box-shadow: 0 6px 18px rgba(0,0,0,0.1);
     }
+    .form-group { margin-bottom: 12px; text-align: left; }
+    .form-group label { display: block; margin-bottom: 6px; color: #34495e; font-size: 14px; }
+    .form-group input {
+      width: 100%; padding: 10px;
+      border: 1px solid #ccc; border-radius: 8px;
+    }
     #map { width: 100%; height: 400px; border-radius: 12px; }
     table { width: 100%; border-collapse: collapse; margin-top: 15px; }
     th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
@@ -84,8 +90,18 @@
 
     <div class="app-card">
       <h3>➕ 新增店家</h3>
-      <input type="text" id="storeName" placeholder="請輸入店名">
-      <input type="text" id="storeAddr" placeholder="請輸入地址">
+      <div class="form-group">
+        <label for="storeName">店名</label>
+        <input type="text" id="storeName" placeholder="請輸入店名">
+      </div>
+      <div class="form-group">
+        <label for="storeAddr">地址</label>
+        <input type="text" id="storeAddr" placeholder="請輸入地址">
+      </div>
+      <div class="form-group">
+        <label for="storeTime">時間</label>
+        <input type="datetime-local" id="storeTime">
+      </div>
       <button class="btn-primary" onclick="addRecord()">儲存</button>
       <button class="btn-success" onclick="exportData()">匯出 JSON</button>
     </div>
@@ -97,6 +113,7 @@
           <tr>
             <th>店名</th>
             <th>地址</th>
+            <th>時間</th>
             <th>操作</th>
           </tr>
         </thead>
@@ -123,31 +140,22 @@
       messagingSenderId: "416551705279",
       appId: "1:416551705279:web:3ba72ebcc992da5f78440a"
     };
-
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
 
     const GOOGLE_API_KEY = "AIzaSyBH1BUgJopBHGDpvU6f9vGEE7U5DFeF8N4";
+    let records = [], map, markers = [];
 
-    let records = [];
-    let map;
-    let markers = [];
-
-    // 認證
-    window.register = async function() {
+    // ================= 認證 =================
+    window.register = async () => {
       try {
         await createUserWithEmailAndPassword(auth, email.value, password.value);
         authMessage.textContent = "✅ 註冊成功，請登入";
-      } catch (e) {
-        authMessage.textContent = "❌ 註冊失敗：" + e.code;
-      }
+      } catch (e) { authMessage.textContent = "❌ 註冊失敗：" + e.code; }
     };
-    window.login = async function() {
-      try {
-        await signInWithEmailAndPassword(auth, email.value, password.value);
-      } catch (e) {
-        authMessage.textContent = "❌ 登入失敗：" + e.code;
-      }
+    window.login = async () => {
+      try { await signInWithEmailAndPassword(auth, email.value, password.value); }
+      catch (e) { authMessage.textContent = "❌ 登入失敗：" + e.code; }
     };
     window.logout = async () => { await signOut(auth); };
 
@@ -163,19 +171,18 @@
       }
     });
 
-    // 本地清單
+    // ================= 本地清單 =================
     async function addRecord() {
       const name = storeName.value.trim();
       const addr = storeAddr.value.trim();
-      if (!name || !addr) return alert("請輸入店名與地址！");
+      const time = storeTime.value;
+      if (!name || !addr || !time) return alert("請輸入完整資料！");
 
       const { lng, lat } = await getCoordinates(addr);
-      const record = { id: Date.now(), storeName: name, storeAddr: addr, lng, lat };
+      const record = { id: Date.now(), storeName: name, storeAddr: addr, storeTime: time, lng, lat };
       records.push(record);
-      saveToLocal();
-      updateTable();
-      updateMap();
-      storeName.value = ""; storeAddr.value = "";
+      saveToLocal(); updateTable(); updateMap();
+      storeName.value = ""; storeAddr.value = ""; storeTime.value = "";
     }
 
     function updateTable() {
@@ -183,11 +190,12 @@
         <tr>
           <td>${r.storeName}</td>
           <td>${r.storeAddr}</td>
+          <td>${r.storeTime}</td>
           <td><button class="btn-danger" onclick="deleteRecord(${r.id})">刪除</button></td>
         </tr>`).join("");
     }
 
-    window.deleteRecord = function(id) {
+    window.deleteRecord = (id) => {
       if (!confirm("確定要刪除嗎？")) return;
       records = records.filter(r => r.id !== id);
       saveToLocal(); updateTable(); updateMap();
@@ -206,7 +214,8 @@
       }
     }
 
-    window.exportData = function() {
+    window.exportData = () => {
+      if (records.length === 0) return alert("沒有資料可匯出！");
       const blob = new Blob([JSON.stringify(records, null, 2)], { type: "application/json" });
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
@@ -214,8 +223,8 @@
       URL.revokeObjectURL(url);
     };
 
-    // Google Maps
-    window.initMap = function() {
+    // ================= Google Maps =================
+    window.initMap = () => {
       map = new google.maps.Map(document.getElementById("map"), {
         center: { lat: 22.6273, lng: 120.3014 }, zoom: 12
       });
@@ -229,8 +238,10 @@
             position: { lat: parseFloat(r.lat), lng: parseFloat(r.lng) },
             map, title: r.storeName
           });
-          new google.maps.InfoWindow({ content: `<b>${r.storeName}</b><br>${r.storeAddr}` })
-            .open(map, marker);
+          const info = new google.maps.InfoWindow({
+            content: `<b>${r.storeName}</b><br>${r.storeAddr}<br>🕒 ${r.storeTime}`
+          });
+          marker.addListener("click", () => info.open(map, marker));
           markers.push(marker);
         }
       });
@@ -241,7 +252,6 @@
         const res = await fetch(`https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(address)}&key=${GOOGLE_API_KEY}`);
         const data = await res.json();
         if (data.status === "OK") return data.results[0].geometry.location;
-        alert("地址轉換失敗：" + data.status);
       } catch (err) { console.error(err); }
       return { lng: 0, lat: 0 };
     }
