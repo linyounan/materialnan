@@ -10,7 +10,7 @@
   gtag('config', 'G-65GTWZKRV5');
 </script>
   <meta charset="UTF-8">
-  <title>娃娃機清單（專業版）v2.0</title>
+  <title>娃娃機清單（Firebase 登錄 + 匯出清單）</title>
   <style>
     body { font-family: "Segoe UI", Arial, sans-serif; margin: 0; background: #f4f6f8; }
     header { background: #2c3e50; color: white; padding: 15px 20px; font-size: 20px; }
@@ -78,6 +78,8 @@
       <input type="password" id="password" placeholder="密碼">
       <button class="btn-primary" onclick="login()">登入</button>
       <button class="btn-secondary" onclick="register()">註冊新帳號</button>
+      <button class="btn-primary" onclick="loginWithGoogle()">使用 Google 登錄</button>
+      <button class="btn-secondary" onclick="loginWithApple()">使用 Apple 登錄</button>
       <p id="authMessage" class="auth-message"></p>
     </div>
   </div>
@@ -124,11 +126,30 @@
       <h3>🗺️ 地圖</h3>
       <div id="map"></div>
     </div>
+
+    <div class="app-card">
+      <h3>📦 已匯出清單</h3>
+      <table id="exportedTable">
+        <thead>
+          <tr>
+            <th>店名</th>
+            <th>地址</th>
+            <th>時間</th>
+            <th>經度</th>
+            <th>緯度</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
   </div>
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/9.17.1/firebase-app.js";
-    import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.17.1/firebase-auth.js";
+    import { 
+      getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged,
+      GoogleAuthProvider, signInWithPopup, OAuthProvider
+    } from "https://www.gstatic.com/firebasejs/9.17.1/firebase-auth.js";
 
     // Firebase 設定
     const firebaseConfig = {
@@ -154,7 +175,7 @@
         authSection.style.display = "flex";
         appSection.style.display = "none";
       }
-      loadFromLocal(); // 登入/登出後都會重新讀取暫存
+      loadFromLocal();
     });
 
     // ===== 登錄相關 =====
@@ -169,8 +190,23 @@
     };
     window.logout = async () => { await signOut(auth); };
 
+    // Google 登錄
+    window.loginWithGoogle = async () => {
+      const provider = new GoogleAuthProvider();
+      try { await signInWithPopup(auth, provider); }
+      catch (e) { alert("Google 登錄失敗：" + e.message); }
+    };
+
+    // Apple 登錄
+    window.loginWithApple = async () => {
+      const provider = new OAuthProvider('apple.com');
+      try { await signInWithPopup(auth, provider); }
+      catch (e) { alert("Apple 登錄失敗：" + e.message); }
+    };
+
     // ===== 主程式 =====
     let records = [];
+    let exportedRecords = [];
     let map, markers = [];
     const GOOGLE_API_KEY = "AIzaSyBH1BUgJopBHGDpvU6f9vGEE7U5DFeF8N4";
 
@@ -220,6 +256,24 @@
       });
     }
 
+    // 更新已匯出清單
+    function updateExportedTable() {
+      const tbody = document.querySelector("#exportedTable tbody");
+      tbody.innerHTML = "";
+
+      exportedRecords.forEach(r => {
+        const row = document.createElement("tr");
+        row.innerHTML = `
+          <td>${r.storeName}</td>
+          <td>${r.storeAddr}</td>
+          <td>${r.storeTime}</td>
+          <td>${r.lng}</td>
+          <td>${r.lat}</td>
+        `;
+        tbody.appendChild(row);
+      });
+    }
+
     // 刪除紀錄
     window.deleteRecord = function (id) {
       records = records.filter(r => r.id !== id);
@@ -228,7 +282,7 @@
       updateMap();
     };
 
-    // 匯出 CSV + 確認 + 自清空
+    // 匯出 CSV + 確認 + 自清空 + 移動到已匯出
     window.exportCSV = function () {
       if (records.length === 0) {
         alert("沒有資料可匯出！");
@@ -249,7 +303,11 @@
       a.click();
       URL.revokeObjectURL(url);
 
-      // 匯出後清空
+      // 匯出後搬到 exportedRecords
+      exportedRecords.push(...records);
+      updateExportedTable();
+
+      // 清空 records
       records = [];
       saveToLocal();
       updateTable();
