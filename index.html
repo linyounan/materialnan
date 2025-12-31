@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>刮刮卡</title>
+  <title>刮刮卡（Firebase）</title>
   <style>
     :root{
       --bg:#ffffff;
@@ -18,7 +18,7 @@
       --danger:#ef4444;
       --win:#f59e0b;
       --covered:#000000;
-      --cellSize: 40px; /* JS 會動態更新 */
+      --cellSize: 40px;
       --gap: 10px;
     }
     *{box-sizing:border-box}
@@ -64,9 +64,21 @@
     button.danger{border-color: rgba(239,68,68,.30); background: rgba(239,68,68,.08)}
     button.danger:hover{background: rgba(239,68,68,.12)}
 
+    .chip{
+      display:inline-flex;align-items:center;gap:8px;
+      border:1px solid var(--border);
+      border-radius:999px;
+      padding:8px 10px;
+      background: rgba(0,0,0,.02);
+      font-size:13px;
+      color: var(--text);
+      max-width: 260px;
+    }
+    .chip .dot{width:8px;height:8px;border-radius:999px;background: rgba(16,185,129,.9)}
+    .chip .name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
     .layout{margin-top:14px;display:grid;grid-template-columns: 1fr;gap:14px}
     @media (min-width: 980px){
-      /* 左邊更大、右邊更窄 */
       .layout{grid-template-columns: 1.45fr .55fr}
     }
 
@@ -86,14 +98,12 @@
     .panelTitle{font-size:13px;color:var(--muted)}
     .stats{font-size:13px;color:var(--muted)}
 
-    /* ✅ 版面會依螢幕自動算 cellSize，盡量塞進可視範圍 */
     .board{
       padding:12px;
       display:grid;
       gap: var(--gap);
       justify-content: center;
       align-content: start;
-      /* grid-template-columns 由 JS 設定 */
     }
 
     .cell{
@@ -104,7 +114,7 @@
       align-items:center;
       justify-content:center;
       font-weight:700;
-      font-size: calc(var(--cellSize) * 0.38); /* 數字比黑色圓形小一點 */
+      font-size: calc(var(--cellSize) * 0.38);
       line-height: 1;
       border:1px solid var(--border);
       box-shadow: 0 6px 14px rgba(0,0,0,.12);
@@ -148,7 +158,6 @@
     }
     .pill.hit{border-color: rgba(245,158,11,.65); background: rgba(245,158,11,.12)}
 
-    /* 📱 全螢幕 UI（配合手機操作） */
     .fullscreenOn .wrap{max-width:100%;margin:0;padding:10px}
     .fullscreenOn header{position:sticky;top:0;z-index:20}
     body.fullscreenOn{ --gap: 8px; }
@@ -157,16 +166,124 @@
       :root{ --gap: 8px; }
       button{padding:10px 10px}
     }
+
+    /* -------- Login Gate -------- */
+    .modalOverlay{
+      position:fixed;inset:0;
+      background: rgba(0,0,0,.45);
+      display:none;
+      align-items:center;
+      justify-content:center;
+      padding: 16px;
+      z-index: 999;
+    }
+    .modalOverlay.show{display:flex}
+    .modal{
+      width: min(520px, 100%);
+      background: #fff;
+      border-radius: 16px;
+      border: 1px solid var(--border);
+      box-shadow: var(--shadow);
+      overflow:hidden;
+    }
+    .modalHead{
+      display:flex;align-items:center;justify-content:space-between;gap:10px;
+      padding: 12px 14px;
+      border-bottom: 1px solid var(--border);
+    }
+    .modalTitle{font-weight:700}
+    .modalBody{padding: 14px}
+    .tabs{display:flex;gap:8px;margin-bottom:12px}
+    .tab{
+      flex:1;
+      padding:10px 12px;
+      border-radius:12px;
+      border: 1px solid var(--border);
+      background: rgba(0,0,0,.03);
+      cursor:pointer;
+      font-weight:700;
+    }
+    .tab.active{background: rgba(37,99,235,.10); border-color: rgba(37,99,235,.35)}
+
+    .form{display:grid;gap:10px}
+    label{font-size:12px;color:var(--muted)}
+    input{
+      width:100%;
+      padding: 10px 12px;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      outline: none;
+      font-size: 14px;
+    }
+    input:focus{border-color: rgba(37,99,235,.45)}
+
+    .row{display:grid;gap:8px}
+    .row2{display:grid;grid-template-columns: 1fr 1fr;gap:10px}
+    @media (max-width: 420px){ .row2{grid-template-columns:1fr} }
+
+    .divider{
+      display:flex;align-items:center;gap:10px;
+      margin: 12px 0;
+      color: var(--muted);
+      font-size: 12px;
+    }
+    .divider:before,.divider:after{
+      content:"";flex:1;height:1px;background: var(--border);
+    }
+
+    .small{font-size:12px;color:var(--muted);line-height:1.55}
+    .dangerText{color: var(--danger)}
+    .kbd{font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; font-size:12px; padding:2px 6px; border:1px solid var(--border); border-bottom-width:2px; border-radius:8px; background: rgba(0,0,0,.03)}
   </style>
 </head>
 <body>
-  <div class="wrap">
+  <!-- ===== Login Gate (一定要先登入) ===== -->
+  <div class="modalOverlay show" id="loginGate" role="dialog" aria-modal="true" aria-labelledby="gateTitle">
+    <div class="modal">
+      <div class="modalHead">
+        <div class="modalTitle" id="gateTitle">請先登入</div>
+      </div>
+      <div class="modalBody">
+        <div class="tabs">
+          <button class="tab active" type="button" id="gateTabLogin">登入</button>
+          <button class="tab" type="button" id="gateTabRegister">註冊</button>
+        </div>
+        <div class="row">
+          <label>Email</label>
+          <input id="gateEmail" type="email" placeholder="you@example.com" autocomplete="email" />
+        </div>
+        <div class="row">
+          <label>密碼</label>
+          <input id="gatePass" type="password" placeholder="至少 6 碼" autocomplete="current-password" />
+        </div>
+        <div class="row2" style="margin-top:6px;">
+          <button class="primary" type="button" id="gateSubmit">登入</button>
+          <button type="button" id="gateClear">清空</button>
+        </div>
+        <div class="divider">或</div>
+        <button class="primary" type="button" id="gateGoogle">使用 Google 登入</button>
+
+        <div class="small" style="margin-top:10px;">
+          你已選擇「<b>必須登入才可玩</b>」。<br>
+          請先在程式碼中填入 <span class="kbd">firebaseConfig</span>，並在 Firebase Console 開啟：<b>Authentication → Email/Password</b> 與 <b>Google</b>。
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== App ===== -->
+  <div class="wrap" id="app" style="display:none;">
     <header>
       <div>
-        <h1 id="title">刮刮卡（1–160）</h1>
-        <div class="sub" id="subtitle">版面：<b>10 排 × 16 列</b>（共 160 格）。未刮開為黑色圓形；點擊後顯示號碼，且<b>不可復原</b>。</div>
+        <h1 id="title">刮刮卡</h1>
+        <div class="sub" id="subtitle"></div>
       </div>
       <div class="controls">
+        <span class="chip" id="userChip" style="display:none;">
+          <span class="dot"></span><span class="name" id="userName"></span>
+        </span>
+        <button class="danger" id="btnLogout" type="button" style="display:none;">🚪 登出</button>
+
         <button class="primary" id="btnRandom" type="button">🎲 隨機選號（需密碼）</button>
         <button class="primary" id="btnPick" type="button">🧷 指定選號（需密碼）</button>
         <button class="primary" id="btnSize" type="button">🧩 更換洞數（需密碼）</button>
@@ -179,7 +296,7 @@
       <section class="panel" id="leftPanel">
         <div class="panelHead">
           <div class="panelTitle">刮卡版面</div>
-          <div class="stats" id="stats">已刮開 0 / 160</div>
+          <div class="stats" id="stats"></div>
         </div>
         <div class="board" id="board"></div>
       </section>
@@ -187,16 +304,16 @@
       <aside class="panel">
         <div class="panelHead">
           <div class="panelTitle">中獎資訊</div>
-          <div class="stats" id="winStats">中獎號碼 0 個</div>
+          <div class="stats" id="winStats"></div>
         </div>
         <div class="side">
           <div class="box">
-            <h2>中獎號碼清單</h2>
+            <h2>中獎號碼</h2>
             <div class="winList" id="winList"></div>
             <div class="hint" style="margin-top:10px;">
               • 中獎不跳通知（只用外框＋右側清單）。<br>
               • 「更換洞數」會清空本局（中獎與刮開）。<br>
-              • ✅ 重新整理不會消失（洞數/亂碼順序/中獎/已刮開都會保留）。
+              • ✅ 登入後會用 Firebase 同步（不同裝置也可還原）。
             </div>
           </div>
         </div>
@@ -204,12 +321,73 @@
     </div>
   </div>
 
-  <script>
-  (() => {
-    // 你可以在這裡改密碼（預設 1234）
-    const PASSWORD = "1234";
+  <!-- ✅ Firebase + App Logic（ESM module） -->
+  <script type="module">
+    // ===== 0) 先填你的 Firebase 設定 =====
+    // Firebase Console → Project settings → Your apps → Web app → firebaseConfig
+    const firebaseConfig = {
+      apiKey: "",
+      authDomain: "",
+      projectId: "",
+      storageBucket: "",
+      messagingSenderId: "",
+      appId: ""
+    };
 
-    // 洞數設定：排x列（rows x cols）
+    // ===== 1) Firebase imports（Web SDK 12.7.0） =====
+    // 參考：Firestore Quickstart 的 Web SDK 版本與初始化方式。citeturn9view0
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-app.js";
+    import {
+      getAuth,
+      onAuthStateChanged,
+      signInWithEmailAndPassword,
+      createUserWithEmailAndPassword,
+      GoogleAuthProvider,
+      signInWithPopup,
+      signOut
+    } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-auth.js";
+    import {
+      getFirestore,
+      doc,
+      getDoc,
+      setDoc,
+      serverTimestamp
+    } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-firestore.js";
+
+    // Auth 的 API（Email/Password、Google provider）參考 Firebase Auth Web 文件的呼叫方式。citeturn6view0turn5view0
+
+    // ===== 2) DOM helpers =====
+    const $ = (id) => document.getElementById(id);
+
+    const loginGate = $('loginGate');
+    const gateTabLogin = $('gateTabLogin');
+    const gateTabRegister = $('gateTabRegister');
+    const gateEmail = $('gateEmail');
+    const gatePass = $('gatePass');
+    const gateSubmit = $('gateSubmit');
+    const gateClear = $('gateClear');
+    const gateGoogle = $('gateGoogle');
+
+    const appEl = $('app');
+    const userChip = $('userChip');
+    const userName = $('userName');
+    const btnLogout = $('btnLogout');
+
+    const titleEl = $('title');
+    const subtitleEl = $('subtitle');
+    const boardEl = $('board');
+    const statsEl = $('stats');
+    const winStatsEl = $('winStats');
+    const winListEl = $('winList');
+
+    const btnRandom = $('btnRandom');
+    const btnPick = $('btnPick');
+    const btnSize = $('btnSize');
+    const btnReset = $('btnReset');
+    const btnFullscreen = $('btnFullscreen');
+
+    // ===== 3) 基本設定（你的原功能保留） =====
+    const PASSWORD = "1234";
     const SIZE_PRESETS = [
       { total: 20,  rows: 4,  cols: 5  },
       { total: 40,  rows: 5,  cols: 8  },
@@ -220,107 +398,76 @@
       { total: 160, rows: 10, cols: 16 },
     ];
 
-    // ✅ 重新整理不消失：用 localStorage 記錄（含：洞數、亂碼順序、已刮開、中獎、全螢幕 UI）
-    const STORAGE_KEY = "scratchcard_persist_v1";
-
-    const boardEl = document.getElementById('board');
-    const statsEl = document.getElementById('stats');
-    const winListEl = document.getElementById('winList');
-    const winStatsEl = document.getElementById('winStats');
-    const titleEl = document.getElementById('title');
-    const subtitleEl = document.getElementById('subtitle');
-
-    const btnRandom = document.getElementById('btnRandom');
-    const btnPick = document.getElementById('btnPick');
-    const btnReset = document.getElementById('btnReset');
-    const btnFullscreen = document.getElementById('btnFullscreen');
-    const btnSize = document.getElementById('btnSize');
-
-    // 目前盤面（預設 160）
+    // ===== 4) App State =====
     let current = { total: 160, rows: 10, cols: 16 };
-
-    // 記錄狀態
     const revealed = new Set();
     const winning = new Set();
-    let order = []; // 亂碼排列
+    let order = [];
     let isFullscreenUI = false;
 
-    function safeJsonParse(raw){
-      try { return JSON.parse(raw); } catch { return null; }
+    // Firebase runtime
+    let fbApp = null;
+    let auth = null;
+    let db = null;
+    let user = null;
+
+    // Firestore doc path: users/{uid}/scratch/state
+    const stateDocRef = () => doc(db, 'users', user.uid, 'scratch', 'state');
+
+    // ===== 5) Utils =====
+    function isFirebaseConfigReady(){
+      return firebaseConfig && firebaseConfig.apiKey && firebaseConfig.authDomain && firebaseConfig.projectId && firebaseConfig.appId;
     }
 
-    function loadPersist(){
-      const raw = localStorage.getItem(STORAGE_KEY);
-      if (!raw) return;
-      const s = safeJsonParse(raw);
-      if (!s || typeof s !== 'object') return;
-
-      // 洞數
-      if (s.current && typeof s.current === 'object') {
-        const t = Number(s.current.total);
-        const r = Number(s.current.rows);
-        const c = Number(s.current.cols);
-        const preset = SIZE_PRESETS.find(p => p.total === t && p.rows === r && p.cols === c);
-        if (preset) current = { ...preset };
-      }
-
-      // order / revealed / winning
-      if (Array.isArray(s.order)) order = s.order.slice();
-      if (Array.isArray(s.revealed)) s.revealed.forEach(n => { const x = Number(n); if (Number.isFinite(x)) revealed.add(x); });
-      if (Array.isArray(s.winning)) s.winning.forEach(n => { const x = Number(n); if (Number.isFinite(x)) winning.add(x); });
-
-      // 全螢幕 UI
-      isFullscreenUI = !!s.isFullscreenUI;
-      document.body.classList.toggle('fullscreenOn', isFullscreenUI);
-      btnFullscreen.textContent = `📱 全螢幕：${isFullscreenUI ? '開' : '關'}`;
-
-      // 修正不符合洞數的資料
-      if (order.length !== current.total) order = [];
-      for (const n of Array.from(revealed)) if (n < 1 || n > current.total) revealed.delete(n);
-      for (const n of Array.from(winning)) if (n < 1 || n > current.total) winning.delete(n);
-    }
-
-    function savePersist(){
-      localStorage.setItem(STORAGE_KEY, JSON.stringify({
-        current,
-        order,
-        revealed: Array.from(revealed),
-        winning: Array.from(winning),
-        isFullscreenUI
-      }));
-    }
-
-    function requirePassword() {
-      const p = prompt("請輸入密碼：");
+    function requirePassword(){
+      const p = prompt('請輸入密碼：');
       if (p === null) return false;
-      if (p !== PASSWORD) {
-        alert("密碼錯誤");
-        return false;
-      }
+      if (p !== PASSWORD){ alert('密碼錯誤'); return false; }
       return true;
     }
 
-    function clampInt(n, min, max) {
-      const x = Number.parseInt(String(n), 10);
+    function clampInt(raw, min, max){
+      const x = Number.parseInt(String(raw), 10);
       if (!Number.isFinite(x)) return null;
       return Math.max(min, Math.min(max, x));
     }
 
-    function sortedArrayFromSet(set) {
+    function sortedArrayFromSet(set){
       return Array.from(set).sort((a,b)=>a-b);
     }
 
+    function makeShuffledNumbers(total){
+      const nums = Array.from({length: total}, (_,i)=>i+1);
+      for (let i=nums.length-1;i>0;i--){
+        const j = Math.floor(Math.random()*(i+1));
+        [nums[i], nums[j]] = [nums[j], nums[i]];
+      }
+      return nums;
+    }
+
+    // ===== 6) UI render =====
     function updateHeader(){
       titleEl.textContent = `刮刮卡（1–${current.total}）`;
       subtitleEl.innerHTML = `版面：<b>${current.rows} 排 × ${current.cols} 列</b>（共 ${current.total} 格）。未刮開為黑色圓形；點擊後顯示號碼，且<b>不可復原</b>。`;
     }
 
-    function renderWinList() {
+    function renderUserUI(){
+      if (!user) {
+        userChip.style.display = 'none';
+        btnLogout.style.display = 'none';
+        return;
+      }
+      userChip.style.display = '';
+      btnLogout.style.display = '';
+      userName.textContent = user.displayName || user.email || '已登入';
+    }
+
+    function renderWinList(){
       const wins = sortedArrayFromSet(winning);
       winStatsEl.textContent = `中獎號碼 ${wins.length} 個`;
 
       winListEl.innerHTML = '';
-      if (wins.length === 0) {
+      if (wins.length === 0){
         const empty = document.createElement('div');
         empty.className = 'hint';
         empty.textContent = '尚未設定中獎號碼';
@@ -328,7 +475,7 @@
         return;
       }
 
-      for (const n of wins) {
+      for (const n of wins){
         const pill = document.createElement('span');
         pill.className = 'pill';
         pill.textContent = String(n);
@@ -337,20 +484,10 @@
       }
     }
 
-    function updateStats() {
+    function updateStats(){
       statsEl.textContent = `已刮開 ${revealed.size} / ${current.total}`;
     }
 
-    function makeShuffledNumbers(total) {
-      const nums = Array.from({ length: total }, (_, i) => i + 1);
-      for (let i = nums.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [nums[i], nums[j]] = [nums[j], nums[i]];
-      }
-      return nums;
-    }
-
-    // ✅ 依螢幕可視高度/寬度計算每格大小，盡量不需要捲動
     function fitBoardToViewport(){
       const rootStyles = getComputedStyle(document.documentElement);
       const gap = parseFloat(rootStyles.getPropertyValue('--gap')) || 10;
@@ -372,36 +509,108 @@
       const sizeByW = (availableW - gap * (cols - 1)) / cols;
       const sizeByH = (availableH - gap * (rows - 1)) / rows;
       let cell = Math.floor(Math.min(sizeByW, sizeByH));
-
       cell = Math.max(18, Math.min(cell, 72));
 
       document.documentElement.style.setProperty('--cellSize', cell + 'px');
       boardEl.style.gridTemplateColumns = `repeat(${cols}, var(--cellSize))`;
     }
 
-    function buildBoard() {
-      boardEl.innerHTML = '';
+    // ===== 7) Firestore sync =====
+    function stateToJson(){
+      return {
+        version: 1,
+        current,
+        order,
+        revealed: Array.from(revealed),
+        winning: Array.from(winning),
+        isFullscreenUI,
+        updatedAt: serverTimestamp()
+      };
+    }
 
-      // ✅ 若沒有固定 order，就產生一次並保存（重新整理不變）
+    function applyStateFromJson(s){
+      // defensive
+      if (!s || typeof s !== 'object') return false;
+
+      if (s.current && typeof s.current === 'object') {
+        const t = Number(s.current.total);
+        const r = Number(s.current.rows);
+        const c = Number(s.current.cols);
+        const preset = SIZE_PRESETS.find(p => p.total===t && p.rows===r && p.cols===c);
+        if (preset) current = { ...preset };
+      }
+
+      revealed.clear();
+      winning.clear();
+
+      if (Array.isArray(s.revealed)) s.revealed.forEach(n => { const x = Number(n); if (Number.isFinite(x)) revealed.add(x); });
+      if (Array.isArray(s.winning)) s.winning.forEach(n => { const x = Number(n); if (Number.isFinite(x)) winning.add(x); });
+      if (Array.isArray(s.order)) order = s.order.map(n => Number(n)).filter(Number.isFinite);
+      if (typeof s.isFullscreenUI === 'boolean') isFullscreenUI = s.isFullscreenUI;
+
+      // 修正
+      if (!Array.isArray(order) || order.length !== current.total) order = makeShuffledNumbers(current.total);
+      for (const n of Array.from(revealed)) if (n < 1 || n > current.total) revealed.delete(n);
+      for (const n of Array.from(winning)) if (n < 1 || n > current.total) winning.delete(n);
+
+      return true;
+    }
+
+    let saveTimer = null;
+    function scheduleSave(){
+      if (!user || !db) return;
+      if (saveTimer) clearTimeout(saveTimer);
+      saveTimer = setTimeout(async () => {
+        try {
+          await setDoc(stateDocRef(), stateToJson(), { merge: true });
+        } catch (e) {
+          console.warn('save failed', e);
+        }
+      }, 250);
+    }
+
+    async function loadStateFromFirestore(){
+      try {
+        const snap = await getDoc(stateDocRef());
+        if (!snap.exists()) {
+          // 第一次登入：建立一份初始盤面（亂碼固定）
+          order = makeShuffledNumbers(current.total);
+          await setDoc(stateDocRef(), stateToJson(), { merge: true });
+          return;
+        }
+        const data = snap.data();
+        const ok = applyStateFromJson(data);
+        if (!ok) {
+          // fallback
+          order = makeShuffledNumbers(current.total);
+        }
+      } catch (e) {
+        console.warn('load failed', e);
+        // fallback
+        order = makeShuffledNumbers(current.total);
+      }
+    }
+
+    // ===== 8) Build board =====
+    function buildBoard(){
+      boardEl.innerHTML = '';
       if (!Array.isArray(order) || order.length !== current.total) {
         order = makeShuffledNumbers(current.total);
       }
-
-      // columns 先設定，然後再 fit
       boardEl.style.gridTemplateColumns = `repeat(${current.cols}, var(--cellSize))`;
 
-      for (const i of order) {
+      for (const num of order){
         const cell = document.createElement('button');
         cell.type = 'button';
         cell.className = 'cell';
-        cell.dataset.num = String(i);
-        cell.textContent = String(i);
+        cell.dataset.num = String(num);
+        cell.textContent = String(num);
 
-        if (!revealed.has(i)) {
+        if (!revealed.has(num)) {
           cell.classList.add('covered');
         } else {
           cell.classList.add('revealed');
-          if (winning.has(i)) cell.classList.add('win');
+          if (winning.has(num)) cell.classList.add('win');
         }
 
         cell.addEventListener('click', () => {
@@ -411,119 +620,97 @@
           revealed.add(n);
           cell.classList.remove('covered');
           cell.classList.add('revealed');
-
           if (winning.has(n)) cell.classList.add('win');
 
           updateStats();
           renderWinList();
-          savePersist();
+          scheduleSave();
         });
 
         boardEl.appendChild(cell);
       }
 
+      document.body.classList.toggle('fullscreenOn', isFullscreenUI);
+      btnFullscreen.textContent = `📱 全螢幕：${isFullscreenUI ? '開' : '關'}`;
+
       updateHeader();
       updateStats();
       renderWinList();
       fitBoardToViewport();
-      savePersist();
     }
 
-    function refreshWinningHighlights() {
-      for (const node of boardEl.querySelectorAll('.cell')) {
+    function refreshWinningHighlights(){
+      for (const node of boardEl.querySelectorAll('.cell')){
         const n = Number(node.dataset.num);
         if (!revealed.has(n)) continue;
         if (winning.has(n)) node.classList.add('win');
         else node.classList.remove('win');
       }
       renderWinList();
-      savePersist();
+      scheduleSave();
     }
 
-    function pickRandomWinners() {
+    // ===== 9) Button actions =====
+    function pickRandomWinners(){
       if (!requirePassword()) return;
-
-      const raw = prompt(`要隨機選幾個中獎號碼？（1–${current.total}）`, "1");
+      const raw = prompt(`要隨機選幾個中獎號碼？（1–${current.total}）`, '1');
       if (raw === null) return;
       const count = clampInt(raw, 1, current.total);
-      if (count === null) {
-        alert("請輸入數字");
-        return;
-      }
+      if (count === null) { alert('請輸入數字'); return; }
 
       const pool = [];
-      for (let i = 1; i <= current.total; i++) {
-        if (!winning.has(i)) pool.push(i);
-      }
+      for (let i=1;i<=current.total;i++) if (!winning.has(i)) pool.push(i);
+      if (pool.length === 0) { alert(`目前 1–${current.total} 已全部設為中獎號碼了`); return; }
 
-      if (pool.length === 0) {
-        alert(`目前 1–${current.total} 已全部設為中獎號碼了`);
-        return;
-      }
-
-      const k = Math.min(count, pool.length);
-      for (let i = pool.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
+      for (let i=pool.length-1;i>0;i--){
+        const j = Math.floor(Math.random()*(i+1));
         [pool[i], pool[j]] = [pool[j], pool[i]];
       }
 
-      for (let i = 0; i < k; i++) winning.add(pool[i]);
+      const k = Math.min(count, pool.length);
+      for (let i=0;i<k;i++) winning.add(pool[i]);
       refreshWinningHighlights();
     }
 
-    function pickSpecificWinners() {
+    function pickSpecificWinners(){
       if (!requirePassword()) return;
-
-      const raw = prompt(
-        `輸入要指定的中獎號碼（1–${current.total}，可用逗號或空白分隔）\n例如：1, 16, 88`,
-        ""
-      );
+      const raw = prompt(`輸入要指定的中獎號碼（1–${current.total}，可用逗號或空白分隔）
+例如：1, 16, 88`, '');
       if (raw === null) return;
 
-      const parts = raw.replaceAll(',', ' ').split(' ').map(s => s.trim()).filter(Boolean);
-      if (parts.length === 0) {
-        alert("沒有讀到任何號碼");
-        return;
-      }
+      const parts = raw.replaceAll(',', ' ').split(' ').map(s=>s.trim()).filter(Boolean);
+      if (!parts.length) { alert('沒有讀到任何號碼'); return; }
 
-      const nums = parts.map(s => Number.parseInt(s, 10)).filter(n => Number.isFinite(n));
-      if (nums.length === 0) {
-        alert("沒有讀到任何有效數字");
-        return;
-      }
+      const nums = parts.map(s=>Number.parseInt(s,10)).filter(Number.isFinite);
+      if (!nums.length) { alert('沒有讀到任何有效數字'); return; }
 
-      const bad = nums.filter(n => n < 1 || n > current.total);
-      if (bad.length > 0) {
-        alert(`以下號碼超出範圍（1–${current.total}）：${bad.join(', ')}`);
-        return;
-      }
+      const bad = nums.filter(n=>n<1 || n>current.total);
+      if (bad.length) { alert(`以下號碼超出範圍（1–${current.total}）：${bad.join(', ')}`); return; }
 
       for (const n of nums) winning.add(n);
       refreshWinningHighlights();
     }
 
-    function resetBoard() {
+    function resetBoard(){
       if (!requirePassword()) return;
-      const ok = confirm("確定要換版嗎？\n（會清空中獎號碼與所有刮開狀態）");
+      const ok = confirm('確定要換版嗎？
+（會清空中獎號碼與所有刮開狀態）');
       if (!ok) return;
-
       revealed.clear();
       winning.clear();
-      order = makeShuffledNumbers(current.total); // ✅ 換版會換亂碼
+      order = makeShuffledNumbers(current.total);
       buildBoard();
+      scheduleSave();
     }
 
     function changeSize(){
       if (!requirePassword()) return;
+      const lines = SIZE_PRESETS.map((s, idx)=>`${idx+1}. ${s.total} 洞（${s.rows} 排 x ${s.cols} 列）`).join('
+');
+      const raw = prompt(`選擇洞數：
+${lines}
 
-      const lines = SIZE_PRESETS
-        .map((s, idx) => `${idx+1}. ${s.total} 洞（${s.rows} 排 x ${s.cols} 列）`)
-        .join("\n");
-
-      const raw = prompt(
-        `選擇洞數：\n${lines}\n\n請輸入 1-${SIZE_PRESETS.length}：`,
-        String(SIZE_PRESETS.length)
-      );
+請輸入 1-${SIZE_PRESETS.length}：`, String(SIZE_PRESETS.length));
       if (raw === null) return;
       const pick = clampInt(raw, 1, SIZE_PRESETS.length);
       if (pick === null) { alert('請輸入數字'); return; }
@@ -533,72 +720,155 @@
       winning.clear();
       order = makeShuffledNumbers(current.total);
       buildBoard();
+      scheduleSave();
     }
 
-    async function toggleFullscreenUI() {
+    async function toggleFullscreen(){
       isFullscreenUI = !isFullscreenUI;
       document.body.classList.toggle('fullscreenOn', isFullscreenUI);
       btnFullscreen.textContent = `📱 全螢幕：${isFullscreenUI ? '開' : '關'}`;
       fitBoardToViewport();
-      savePersist();
+      scheduleSave();
 
-      try {
+      try{
         if (isFullscreenUI && document.documentElement.requestFullscreen) {
           await document.documentElement.requestFullscreen();
         }
         if (!isFullscreenUI && document.fullscreenElement) {
           await document.exitFullscreen();
         }
+      } catch {}
+    }
+
+    // ===== 10) Login Gate actions =====
+    let gateMode = 'login';
+    function setGateMode(mode){
+      gateMode = mode;
+      const isLogin = mode === 'login';
+      gateTabLogin.classList.toggle('active', isLogin);
+      gateTabRegister.classList.toggle('active', !isLogin);
+      gateSubmit.textContent = isLogin ? '登入' : '註冊';
+      gatePass.autocomplete = isLogin ? 'current-password' : 'new-password';
+    }
+
+    async function emailAuthSubmit(){
+      const email = (gateEmail.value || '').trim().toLowerCase();
+      const pass = gatePass.value || '';
+      if (!email || !email.includes('@')) { alert('請輸入有效 Email'); return; }
+      if (pass.length < 6) { alert('密碼至少 6 碼'); return; }
+
+      try{
+        if (gateMode === 'register') {
+          await createUserWithEmailAndPassword(auth, email, pass);
+        } else {
+          await signInWithEmailAndPassword(auth, email, pass);
+        }
       } catch (e) {
-        // 일부 모바일 브라우저는 막을 수 있음 — UI는 계속 유지
+        alert('登入/註冊失敗：' + (e?.message || 'unknown'));
       }
     }
 
-    // --- 簡單自我測試（不影響功能，幫助除錯） ---
+    async function googleAuth(){
+      try{
+        const provider = new GoogleAuthProvider();
+        await signInWithPopup(auth, provider);
+      } catch (e) {
+        alert('Google 登入失敗：' + (e?.message || 'unknown'));
+      }
+    }
+
+    async function doLogout(){
+      try{
+        await signOut(auth);
+      } catch (e) {
+        alert('登出失敗：' + (e?.message || 'unknown'));
+      }
+    }
+
+    // ===== 11) Boot =====
+    function showGate(){
+      loginGate.classList.add('show');
+      appEl.style.display = 'none';
+    }
+    function showApp(){
+      loginGate.classList.remove('show');
+      appEl.style.display = '';
+    }
+
     function runSelfTests(){
       const assert = (cond, msg) => { if (!cond) console.warn('TEST FAIL:', msg); };
-      const presetTotals = new Set(SIZE_PRESETS.map(p => p.total));
-      assert(presetTotals.has(160), 'SIZE_PRESETS should include 160');
+      assert(SIZE_PRESETS.some(p=>p.total===160), 'SIZE_PRESETS should include 160');
       assert(current.total === current.rows * current.cols, 'current total should equal rows*cols');
     }
 
-    btnRandom.addEventListener('click', pickRandomWinners);
-    btnPick.addEventListener('click', pickSpecificWinners);
-    btnReset.addEventListener('click', resetBoard);
-    btnFullscreen.addEventListener('click', toggleFullscreenUI);
-    btnSize.addEventListener('click', changeSize);
+    function bindEvents(){
+      gateTabLogin.addEventListener('click', ()=>setGateMode('login'));
+      gateTabRegister.addEventListener('click', ()=>setGateMode('register'));
+      gateSubmit.addEventListener('click', emailAuthSubmit);
+      gateGoogle.addEventListener('click', googleAuth);
+      gateClear.addEventListener('click', ()=>{ gateEmail.value=''; gatePass.value=''; gateEmail.focus(); });
 
-    window.addEventListener('resize', () => {
-      fitBoardToViewport();
-    });
+      btnLogout.addEventListener('click', doLogout);
+      btnRandom.addEventListener('click', pickRandomWinners);
+      btnPick.addEventListener('click', pickSpecificWinners);
+      btnSize.addEventListener('click', changeSize);
+      btnReset.addEventListener('click', resetBoard);
+      btnFullscreen.addEventListener('click', toggleFullscreen);
 
-    document.addEventListener('fullscreenchange', () => {
-      if (!document.fullscreenElement && isFullscreenUI) {
-        isFullscreenUI = false;
-        document.body.classList.remove('fullscreenOn');
-        btnFullscreen.textContent = '📱 全螢幕：關';
-        fitBoardToViewport();
-        savePersist();
+      window.addEventListener('resize', ()=>fitBoardToViewport());
+      document.addEventListener('fullscreenchange', () => {
+        if (!document.fullscreenElement && isFullscreenUI) {
+          isFullscreenUI = false;
+          document.body.classList.remove('fullscreenOn');
+          btnFullscreen.textContent = '📱 全螢幕：關';
+          fitBoardToViewport();
+          scheduleSave();
+        }
+      });
+
+      window.addEventListener('error', (e) => {
+        alert('⚠️ 程式錯誤：' + (e?.message || 'unknown') + '
+建議打開瀏覽器開發者工具 Console 看詳細錯誤。');
+      });
+    }
+
+    async function init(){
+      setGateMode('login');
+      bindEvents();
+
+      if (!isFirebaseConfigReady()) {
+        showGate();
+        alert('你尚未填入 firebaseConfig，請先填入後再測試。');
+        return;
       }
-    });
 
-    // ✅ 如果有 JS 錯誤，至少會跳出提示，避免「功能都沒了」但不知道原因
-    window.addEventListener('error', (e) => {
-      alert('⚠️ 程式錯誤：' + (e?.message || 'unknown') + '\n建議打開瀏覽器開發者工具 Console 看詳細錯誤。');
-    });
+      fbApp = initializeApp(firebaseConfig);
+      auth = getAuth(fbApp);
+      db = getFirestore(fbApp);
 
-    const init = () => {
-      loadPersist();
-      runSelfTests();
-      buildBoard();
-    };
+      onAuthStateChanged(auth, async (u) => {
+        user = u;
+        if (!user) {
+          showGate();
+          renderUserUI();
+          return;
+        }
+
+        // 已登入 → 載入資料 → 顯示刮卡
+        renderUserUI();
+        showApp();
+
+        await loadStateFromFirestore();
+        runSelfTests();
+        buildBoard();
+      });
+    }
 
     if (document.readyState === 'loading') {
       document.addEventListener('DOMContentLoaded', init);
     } else {
       init();
     }
-  })();
   </script>
 </body>
 </html>
