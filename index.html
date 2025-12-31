@@ -22,7 +22,14 @@
     }
     *{box-sizing:border-box}
     html,body{height:100%}
-    body{margin:0;font-family:system-ui,"Noto Sans TC","Microsoft JhengHei",sans-serif;background:var(--bg);color:var(--text);user-select:none;-webkit-user-select:none;-ms-user-select:none}
+    body{
+      margin:0;
+      font-family:system-ui,"Noto Sans TC","Microsoft JhengHei",sans-serif;
+      background:var(--bg);
+      color:var(--text);
+      user-select:none;-webkit-user-select:none;-ms-user-select:none;
+      -webkit-tap-highlight-color:transparent;
+    }
 
     .wrap{max-width:1120px;margin:22px auto;padding:0 14px}
     header{display:flex;gap:12px;justify-content:space-between;flex-wrap:wrap;align-items:flex-start;padding:14px;border:1px solid var(--border);border-radius:16px;box-shadow:var(--shadow)}
@@ -30,7 +37,7 @@
     .sub{margin-top:6px;color:var(--muted);font-size:12px;line-height:1.5}
 
     .controls{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
-    button{border:1px solid var(--border);background:var(--btn);padding:10px 12px;border-radius:12px;cursor:pointer;user-select:none;-webkit-tap-highlight-color:transparent}
+    button{border:1px solid var(--border);background:var(--btn);padding:10px 12px;border-radius:12px;cursor:pointer;user-select:none}
     button:hover{background:var(--btnHover)}
     button.primary{background:rgba(37,99,235,.10);border-color:rgba(37,99,235,.30)}
     button.danger{background:rgba(239,68,68,.10);border-color:rgba(239,68,68,.30)}
@@ -51,11 +58,10 @@
       width:var(--cellSize);height:var(--cellSize);
       border-radius:50%;display:flex;align-items:center;justify-content:center;
       font-weight:800;
-      /* 數字比圓形小一點 */
       font-size:calc(var(--cellSize) * .34);
       border:1px solid var(--border);
       cursor:pointer;
-      box-shadow:0 6px 14px rgba(0,0,0,.12)
+      box-shadow:0 6px 14px rgba(0,0,0,.12);
     }
     .cell.covered{background:var(--covered);color:transparent}
     .cell.revealed{background:#fff;color:var(--text);cursor:default}
@@ -105,7 +111,7 @@
       <div class="winStrip">
         <div class="winList" id="winList"></div>
         <div class="hint">
-</div>
+      </div>
       </div>
 
       <div class="board" id="board"></div>
@@ -145,7 +151,7 @@
             <div class="scratchNumber" id="scratchNumber"></div>
             <canvas class="scratchCanvas" id="scratchCanvas" width="300" height="300"></canvas>
           </div>
-          <div class="scratchProg" id="scratchProg">刮開進度：0%（至少 70% 才能確認）</div>
+          <div class="scratchProg" id="scratchProg">刮開進度：0%（至少 10% 才能確認）</div>
           <div class="grid" style="width:100%">
             <button id="btnScratchCancel" type="button">取消</button>
             <button class="primary" id="btnScratchConfirm" type="button" disabled>確認刮開</button>
@@ -159,12 +165,21 @@
 
   <script>
   document.addEventListener('DOMContentLoaded', function(){
-    // 禁止右鍵選單（防止複製數字）
+    // ===== 防止複製/右鍵（注意：無法 100% 防止，但可降低） =====
     document.addEventListener('contextmenu', function(e){ e.preventDefault(); });
+    document.addEventListener('copy', function(e){ e.preventDefault(); });
+    document.addEventListener('cut', function(e){ e.preventDefault(); });
+    document.addEventListener('selectstart', function(e){ e.preventDefault(); });
+    document.addEventListener('keydown', function(e){
+      var key = (e.key || '').toLowerCase();
+      if ((e.ctrlKey || e.metaKey) && (key === 'c' || key === 'x' || key === 'a' || key === 's' || key === 'p')){
+        e.preventDefault();
+      }
+    });
 
     // ===== 基本設定 =====
     var PASSWORD = '1234';
-    var STORAGE_KEY = 'scratchcard_state_v7';
+    var STORAGE_KEY = 'scratchcard_state_v8';
     var SCRATCH_CONFIRM_THRESHOLD = 10; // %
 
     var SIZE_PRESETS = [
@@ -312,7 +327,7 @@
       return true;
     }
 
-    // ===== Layout sizing (no animation) =====
+    // ===== Layout sizing =====
     function fitCellSize(){
       try{
         var gap = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--gap')) || 10;
@@ -348,7 +363,7 @@
     // ===== UI render =====
     function updateHeader(){
       titleEl.textContent = '刮刮卡（1–' + current.total + '）';
-      subtitleEl.innerHTML = '版面：<b>' + current.rows + ' 排 × ' + current.cols + ' 列</b>（共 ' + current.total + ' 格）。';
+      subtitleEl.innerHTML = '版面：<b>' + current.rows + ' 排 × ' + current.cols + ' 列</b>（共 ' + current.total + ' 格）。點洞 → 進入刮卡視窗，用手滑刮，刮到 ' + SCRATCH_CONFIRM_THRESHOLD + '% 才能按「確認刮開」。';
     }
 
     function updateStats(){
@@ -385,6 +400,8 @@
     var currentScratchNum = null;
     var currentScratchPercent = 0;
     var hasScratched = false;
+    var lastX = null;
+    var lastY = null;
 
     function setScratchCanvasSize(){
       var rect = scratchStage.getBoundingClientRect();
@@ -414,7 +431,7 @@
       try{ data = sctx.getImageData(0,0,w,h).data; }
       catch(e){ return 0; }
 
-      // 取樣估算透明比例（避免每次全掃太慢）
+      // 取樣估算透明比例
       var step = Math.max(4, Math.floor(w / 90));
       var total = 0;
       var clear = 0;
@@ -433,7 +450,6 @@
       currentScratchPercent = getScratchPercent();
       scratchProg.textContent = '刮開進度：' + currentScratchPercent + '%（至少 ' + SCRATCH_CONFIRM_THRESHOLD + '% 才能確認）';
 
-      // 底下號碼越來越清楚（不是動畫，是立即更新）
       var op = 0.18 + Math.min(0.82, currentScratchPercent/100);
       scratchNumber.style.opacity = String(op);
 
@@ -455,6 +471,8 @@
       currentScratchNum = num;
       currentScratchPercent = 0;
       hasScratched = false;
+      lastX = null;
+      lastY = null;
 
       scratchNumber.textContent = String(num);
       scratchNumber.style.opacity = '0.18';
@@ -472,12 +490,14 @@
     }
 
     function closeScratch(force){
-      if (!force && hasScratched) return; // 已刮過就不允許關閉
+      if (!force && hasScratched) return;
       scratchOverlay.classList.remove('show');
       scratchActive = false;
       currentScratchNum = null;
       currentScratchPercent = 0;
       hasScratched = false;
+      lastX = null;
+      lastY = null;
       sctx.globalCompositeOperation = 'source-over';
     }
 
@@ -485,11 +505,25 @@
       var rect = scratchCanvas.getBoundingClientRect();
       var x = clientX - rect.left;
       var y = clientY - rect.top;
-      var r = Math.max(12, Math.floor(scratchCanvas.width * 0.05));
 
-      sctx.beginPath();
-      sctx.arc(x, y, r, 0, Math.PI*2);
-      sctx.fill();
+      sctx.lineCap = 'round';
+      sctx.lineJoin = 'round';
+      sctx.lineWidth = Math.max(18, Math.floor(scratchCanvas.width * 0.08));
+
+      if (lastX === null){
+        sctx.beginPath();
+        sctx.moveTo(x, y);
+        sctx.lineTo(x + 0.01, y + 0.01);
+        sctx.stroke();
+      } else {
+        sctx.beginPath();
+        sctx.moveTo(lastX, lastY);
+        sctx.lineTo(x, y);
+        sctx.stroke();
+      }
+
+      lastX = x;
+      lastY = y;
 
       lockCancelIfScratched();
     }
@@ -497,13 +531,15 @@
     scratchCanvas.addEventListener('pointerdown', function(e){
       if (!scratchActive) return;
       scratchCanvas.setPointerCapture(e.pointerId);
+      lastX = null;
+      lastY = null;
       scratchAt(e.clientX, e.clientY);
       updateScratchProgress();
     });
 
     scratchCanvas.addEventListener('pointermove', function(e){
       if (!scratchActive) return;
-      if ((e.buttons & 1) !== 1) return; // 按著才刮
+      if ((e.buttons & 1) !== 1) return;
       scratchAt(e.clientX, e.clientY);
       updateScratchProgress();
     });
@@ -667,7 +703,8 @@
         var p = SIZE_PRESETS[i];
         if (p.total !== p.rows*p.cols) console.warn('TEST FAIL: preset total mismatch', p);
       }
-      if (SCRATCH_CONFIRM_THRESHOLD !== 70) console.warn('TEST WARN: threshold not 70');
+      // ✅ 目前門檻是 10
+      if (SCRATCH_CONFIRM_THRESHOLD !== 10) console.warn('TEST WARN: threshold expected 10');
       if (!board || !btnSettings || !scratchCanvas) console.warn('TEST FAIL: required DOM missing');
     })();
 
@@ -677,10 +714,6 @@
 
     window.addEventListener('resize', function(){
       fitCellSize();
-      if (scratchOverlay.classList.contains('show')){
-        // 重新計算刮卡畫布大小（不重置刮膜）
-        //（如果你希望旋轉手機時保持刮痕也不變，需要更複雜的縮放映射；目前採用簡單策略：維持現況）
-      }
     });
   });
   </script>
