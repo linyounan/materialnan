@@ -334,12 +334,12 @@
     // ===== 0) 先填你的 Firebase 設定 =====
     // Firebase Console → Project settings → Your apps → Web app → firebaseConfig
     const firebaseConfig = {
-      apiKey: "",
-      authDomain: "",
-      projectId: "",
-      storageBucket: "",
-      messagingSenderId: "",
-      appId: ""
+      apiKey: "AIzaSyB1SOrDItdUUshN2DuijWjdEAbuNXGvY6A",
+      authDomain: "clawmachine-68199.firebaseapp.com",
+      projectId: "clawmachine-68199",
+      storageBucket: "clawmachine-68199.appspot.com",
+      messagingSenderId: "416551705279",
+      appId: "1:416551705279:web:3ba72ebcc992da5f78440a"
     };
 
     // ===== 1) Firebase imports（Web SDK 12.7.0） =====
@@ -693,7 +693,7 @@
       if (!nums.length) { alert('沒有讀到任何有效數字'); return; }
 
       const bad = nums.filter(n=>n<1 || n>current.total);
-      if (bad.length) { alert(`以下號碼超出範圍（1–${current.total}）：${bad.join(', ')}`); return; }
+      if (bad.length) { alert(`以下號碼超出範圍（1–${current.total}）：${bad.join('\n')}`); return; }
 
       for (const n of nums) winning.add(n);
       refreshWinningHighlights();
@@ -701,8 +701,7 @@
 
     function resetBoard(){
       if (!requirePassword()) return;
-      const ok = confirm('確定要換版嗎？
-（會清空中獎號碼與所有刮開狀態）');
+      const ok = confirm('確定要換版嗎？\n（會清空中獎號碼與所有刮開狀態）');
       if (!ok) return;
       revealed.clear();
       winning.clear();
@@ -835,8 +834,7 @@ ${lines}
       });
 
       window.addEventListener('error', (e) => {
-        alert('⚠️ 程式錯誤：' + (e?.message || 'unknown') + '
-建議打開瀏覽器開發者工具 Console 看詳細錯誤。');
+        alert('⚠️ 程式錯誤：' + (e?.message || 'unknown') + '\n建議打開瀏覽器開發者工具 Console 看詳細錯誤。');
       });
     }
 
