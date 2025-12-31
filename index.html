@@ -22,7 +22,7 @@
     }
     *{box-sizing:border-box}
     html,body{height:100%}
-    body{margin:0;font-family:system-ui,"Noto Sans TC","Microsoft JhengHei",sans-serif;background:var(--bg);color:var(--text)}
+    body{margin:0;font-family:system-ui,"Noto Sans TC","Microsoft JhengHei",sans-serif;background:var(--bg);color:var(--text);user-select:none;-webkit-user-select:none;-ms-user-select:none}
 
     .wrap{max-width:1120px;margin:22px auto;padding:0 14px}
     header{display:flex;gap:12px;justify-content:space-between;flex-wrap:wrap;align-items:flex-start;padding:14px;border:1px solid var(--border);border-radius:16px;box-shadow:var(--shadow)}
@@ -88,7 +88,7 @@
     <header>
       <div>
         <h1 id="title">刮刮卡（1–160）</h1>
-        <div class="sub" id="subtitle">版面：<b>10 排 × 16 列</b>（共 160 格）。點洞 → 進入刮卡視窗，用手滑刮，刮到 70% 才能按「確認刮開」。</div>
+        <div class="sub" id="subtitle">版面：<b>10 排 × 16 列</b>（共 160 格）。</div>
       </div>
       <div class="controls">
         <button id="btnFullscreen" type="button">⛶ 全螢幕</button>
@@ -104,9 +104,8 @@
 
       <div class="winStrip">
         <div class="winList" id="winList"></div>
-        <div class="hint">• 中獎不跳通知（用外框標示）。
-• 重新整理不會消失（洞數/亂碼順序/中獎/已刮開都會保留）。
-• 規則：只要刮到任何一點，就不能取消/關閉刮卡視窗（只能刮到 70% 後「確認刮開」）。</div>
+        <div class="hint">
+</div>
       </div>
 
       <div class="board" id="board"></div>
@@ -122,10 +121,10 @@
       </div>
       <div class="modalBody">
         <div class="grid">
-          <button class="primary" type="button" id="btnRandom">🎲 隨機選號（設定中獎）</button>
-          <button class="primary" type="button" id="btnPick">🧷 指定選號（設定中獎）</button>
-          <button class="primary" type="button" id="btnSize">🧩 更換洞數（清空）</button>
-          <button class="danger" type="button" id="btnReset">🔁 換版（清空）</button>
+          <button class="primary" type="button" id="btnRandom">🎲 隨機選號</button>
+          <button class="primary" type="button" id="btnPick">🧷 指定選號</button>
+          <button class="primary" type="button" id="btnSize">🧩 更換洞數</button>
+          <button class="danger" type="button" id="btnReset">🔁 換版</button>
         </div>
         <div class="hint">密碼正確才會進到這裡。
 「更換洞數 / 換版」會清空本局（中獎與已刮）。</div>
@@ -160,6 +159,9 @@
 
   <script>
   document.addEventListener('DOMContentLoaded', function(){
+    // 禁止右鍵選單（防止複製數字）
+    document.addEventListener('contextmenu', function(e){ e.preventDefault(); });
+
     // ===== 基本設定 =====
     var PASSWORD = '1234';
     var STORAGE_KEY = 'scratchcard_state_v7';
@@ -346,7 +348,7 @@
     // ===== UI render =====
     function updateHeader(){
       titleEl.textContent = '刮刮卡（1–' + current.total + '）';
-      subtitleEl.innerHTML = '版面：<b>' + current.rows + ' 排 × ' + current.cols + ' 列</b>（共 ' + current.total + ' 格）。點洞 → 進入刮卡視窗，用手滑刮，刮到 70% 才能按「確認刮開」。';
+      subtitleEl.innerHTML = '版面：<b>' + current.rows + ' 排 × ' + current.cols + ' 列</b>（共 ' + current.total + ' 格）。';
     }
 
     function updateStats(){
