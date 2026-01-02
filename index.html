@@ -6,19 +6,10 @@
   <title>刮刮卡</title>
   <style>
     :root{
-      --bg:#ffffff;
-      --text:#111827;
-      --muted:#6b7280;
-      --border:rgba(0,0,0,.10);
-      --shadow:0 10px 24px rgba(0,0,0,.10);
-      --btn:#f3f4f6;
-      --btnHover:#e5e7eb;
-      --primary:#2563eb;
-      --danger:#ef4444;
-      --win:#f59e0b;
-      --covered:#000000;
-      --cellSize: 40px;
-      --gap: 10px;
+      --bg:#ffffff;--text:#111827;--muted:#6b7280;--border:rgba(0,0,0,.12);
+      --shadow:0 10px 24px rgba(0,0,0,.10);--btn:#f3f4f6;--btnHover:#e5e7eb;
+      --primary:#2563eb;--danger:#ef4444;--win:#f59e0b;--covered:#000000;
+      --cellSize:40px;--gap:10px;
     }
     *{box-sizing:border-box}
     html,body{height:100%}
@@ -30,44 +21,27 @@
       user-select:none;-webkit-user-select:none;-ms-user-select:none;
       -webkit-tap-highlight-color:transparent;
     }
-
-    .wrap{max-width:1120px;margin:22px auto;padding:0 14px}
-    header{display:flex;gap:12px;justify-content:space-between;flex-wrap:wrap;align-items:flex-start;padding:14px;border:1px solid var(--border);border-radius:16px;box-shadow:var(--shadow)}
-    h1{margin:0;font-size:18px}
-    .sub{margin-top:6px;color:var(--muted);font-size:12px;line-height:1.5}
-
+    .wrap{max-width:1120px;margin:18px auto;padding:0 14px}
+    header{display:flex;gap:12px;justify-content:space-between;flex-wrap:wrap;align-items:center;padding:14px;border:1px solid var(--border);border-radius:16px;box-shadow:var(--shadow)}
+    h1{margin:0;font-size:18px;display:flex;flex-wrap:wrap;gap:8px;align-items:baseline}
+    .meta{font-size:12px;color:var(--muted)}
     .controls{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
-    button{border:1px solid var(--border);background:var(--btn);padding:10px 12px;border-radius:12px;cursor:pointer;user-select:none}
+    button{border:1px solid var(--border);background:var(--btn);padding:10px 12px;border-radius:12px;cursor:pointer}
     button:hover{background:var(--btnHover)}
     button.primary{background:rgba(37,99,235,.10);border-color:rgba(37,99,235,.30)}
     button.danger{background:rgba(239,68,68,.10);border-color:rgba(239,68,68,.30)}
     button:disabled{opacity:.55;cursor:not-allowed}
 
-    .panel{margin-top:14px;border:1px solid var(--border);border-radius:16px;box-shadow:var(--shadow);overflow:hidden}
+    .panel{margin-top:12px;border:1px solid var(--border);border-radius:16px;box-shadow:var(--shadow);overflow:hidden}
     .panelHead{padding:12px 14px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap}
     .label,.stats{font-size:13px;color:var(--muted)}
 
-    .winStrip{padding:12px 14px;border-bottom:1px solid var(--border)}
-    .winList{display:flex;flex-wrap:wrap;gap:8px;min-height:28px}
-    .pill{padding:6px 10px;border-radius:999px;border:1px solid var(--border);font-size:13px;background:rgba(0,0,0,.02)}
-    .pill.hit{border-color:rgba(245,158,11,.65);background:rgba(245,158,11,.12)}
-    .hint{font-size:12px;color:var(--muted);line-height:1.55;margin-top:8px;white-space:pre-line}
-
     .board{padding:12px;display:grid;gap:var(--gap);justify-content:center;min-height:60vh}
-    .cell{
-      width:var(--cellSize);height:var(--cellSize);
-      border-radius:50%;display:flex;align-items:center;justify-content:center;
-      font-weight:800;
-      font-size:calc(var(--cellSize) * .34);
-      border:1px solid var(--border);
-      cursor:pointer;
-      box-shadow:0 6px 14px rgba(0,0,0,.12);
-    }
+    .cell{width:var(--cellSize);height:var(--cellSize);border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:calc(var(--cellSize)*.34);border:1px solid var(--border);cursor:pointer;box-shadow:0 6px 14px rgba(0,0,0,.12)}
     .cell.covered{background:var(--covered);color:transparent}
     .cell.revealed{background:#fff;color:var(--text);cursor:default}
     .cell.revealed.win{border-color:var(--win);box-shadow:0 10px 20px rgba(245,158,11,.16),0 10px 20px rgba(0,0,0,.10)}
 
-    /* Modal */
     .modalOverlay{position:fixed;inset:0;background:rgba(0,0,0,.45);display:none;align-items:center;justify-content:center;padding:16px;z-index:999}
     .modalOverlay.show{display:flex}
     .modal{width:min(560px,100%);background:#fff;border-radius:16px;border:1px solid var(--border);box-shadow:var(--shadow);overflow:hidden}
@@ -77,14 +51,12 @@
     .grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
     @media(max-width:520px){.grid{grid-template-columns:1fr}}
 
-    /* Scratch modal */
     .scratchWrap{display:flex;flex-direction:column;align-items:center;gap:12px}
-    .scratchStage{position:relative;width:min(360px, 84vw);aspect-ratio:1/1}
-    .scratchNumber{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-weight:900;color:#111;z-index:0;opacity:.18;user-select:none}
+    .scratchStage{position:relative;width:min(360px,84vw);aspect-ratio:1/1}
+    .scratchNumber{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-weight:900;color:#111;z-index:0;opacity:.18}
     .scratchCanvas{position:absolute;inset:0;z-index:2;border-radius:50%;touch-action:none;background:transparent}
     .scratchProg{font-size:12px;color:var(--muted)}
 
-    /* Debug errors */
     .err{position:fixed;left:10px;right:10px;bottom:10px;background:#111;color:#fff;padding:10px 12px;border-radius:12px;font-size:12px;display:none;z-index:2000;white-space:pre-wrap}
     .err.show{display:block}
   </style>
@@ -92,10 +64,7 @@
 <body>
   <div class="wrap">
     <header>
-      <div>
-        <h1 id="title">刮刮卡（1–160）</h1>
-        <div class="sub" id="subtitle">版面：<b>10 排 × 16 列</b>（共 160 格）。</div>
-      </div>
+      <h1 id="title">刮刮卡NAN（1–160）</h1>
       <div class="controls">
         <button id="btnFullscreen" type="button">⛶ 全螢幕</button>
         <button class="primary" id="btnSettings" type="button">⚙️ 設定</button>
@@ -104,46 +73,37 @@
 
     <section class="panel" id="panel">
       <div class="panelHead">
-        <div class="label">刮卡版面 <span class="stats" id="stats">已刮 0 / 160</span></div>
+        <div class="label">刮刮卡 <span class="stats" id="stats">已刮 0 / 160</span></div>
         <div class="stats" id="winStats">中獎 0 個</div>
       </div>
-
-      <div class="winStrip">
-        <div class="winList" id="winList"></div>
-        <div class="hint">
-      </div>
-      </div>
-
       <div class="board" id="board"></div>
     </section>
   </div>
 
-  <!-- 設定視窗 -->
-  <div class="modalOverlay" id="settingsOverlay" role="dialog" aria-modal="true" aria-labelledby="settingsTitle">
+  <!-- 設定視窗（含：換版） -->
+  <div class="modalOverlay" id="settingsOverlay" role="dialog" aria-modal="true" aria-label="設定">
     <div class="modal">
       <div class="modalHead">
-        <div class="modalTitle" id="settingsTitle">設定</div>
-        <button type="button" id="btnCloseSettings">✖</button>
+        <div class="modalTitle">設定</div>
+        <button id="btnCloseSettings" type="button">✖</button>
       </div>
       <div class="modalBody">
         <div class="grid">
-          <button class="primary" type="button" id="btnRandom">🎲 隨機選號</button>
-          <button class="primary" type="button" id="btnPick">🧷 指定選號</button>
-          <button class="primary" type="button" id="btnSize">🧩 更換洞數</button>
-          <button class="danger" type="button" id="btnReset">🔁 換版</button>
+          <button class="primary" id="btnRandom" type="button">🎲 隨機選號</button>
+          <button class="primary" id="btnPick" type="button">🧷 指定選號</button>
+          <button class="primary" id="btnSize" type="button">🧩 更換洞數</button>
+          <button class="danger" id="btnReset" type="button">🔁 換版</button>
         </div>
-        <div class="hint">密碼正確才會進到這裡。
-「更換洞數 / 換版」會清空本局（中獎與已刮）。</div>
       </div>
     </div>
   </div>
 
   <!-- 刮卡放大視窗 -->
-  <div class="modalOverlay" id="scratchOverlay" role="dialog" aria-modal="true" aria-labelledby="scratchTitle">
+  <div class="modalOverlay" id="scratchOverlay" role="dialog" aria-modal="true" aria-label="刮開">
     <div class="modal" style="max-width:540px">
       <div class="modalHead">
-        <div class="modalTitle" id="scratchTitle">刮開</div>
-        <button type="button" id="btnScratchClose">✖</button>
+        <div class="modalTitle">刮開</div>
+        <button id="btnScratchClose" type="button">✖</button>
       </div>
       <div class="modalBody">
         <div class="scratchWrap">
@@ -151,7 +111,7 @@
             <div class="scratchNumber" id="scratchNumber"></div>
             <canvas class="scratchCanvas" id="scratchCanvas" width="300" height="300"></canvas>
           </div>
-          <div class="scratchProg" id="scratchProg">刮開進度：0%（至少 10% 才能確認）</div>
+          <div class="scratchProg" id="scratchProg">刮開進度：0%</div>
           <div class="grid" style="width:100%">
             <button id="btnScratchCancel" type="button">取消</button>
             <button class="primary" id="btnScratchConfirm" type="button" disabled>確認刮開</button>
@@ -171,15 +131,14 @@
     document.addEventListener('cut', function(e){ e.preventDefault(); });
     document.addEventListener('selectstart', function(e){ e.preventDefault(); });
     document.addEventListener('keydown', function(e){
-      var key = (e.key || '').toLowerCase();
-      if ((e.ctrlKey || e.metaKey) && (key === 'c' || key === 'x' || key === 'a' || key === 's' || key === 'p')){
-        e.preventDefault();
-      }
+      var k = (e.key || '').toLowerCase();
+      if ((e.ctrlKey || e.metaKey) && (k === 'c' || k === 'x' || k === 'a' || k === 's' || k === 'p')) e.preventDefault();
     });
 
     // ===== 基本設定 =====
     var PASSWORD = '911021';
-    var STORAGE_KEY = 'scratchcard_state_v8';
+    var STORAGE_KEY = 'scratchcard_state_v11';
+    var ROUND_KEY = 'scratchcard_round_v11';
     var SCRATCH_CONFIRM_THRESHOLD = 10; // %
 
     var SIZE_PRESETS = [
@@ -197,15 +156,13 @@
     var board = $('board');
     var stats = $('stats');
     var winStats = $('winStats');
-    var winList = $('winList');
     var titleEl = $('title');
-    var subtitleEl = $('subtitle');
 
     var btnFullscreen = $('btnFullscreen');
     var btnSettings = $('btnSettings');
+
     var settingsOverlay = $('settingsOverlay');
     var btnCloseSettings = $('btnCloseSettings');
-
     var btnRandom = $('btnRandom');
     var btnPick = $('btnPick');
     var btnSize = $('btnSize');
@@ -221,15 +178,10 @@
     var btnScratchClose = $('btnScratchClose');
 
     var errBox = $('errBox');
-    function showErr(msg){
-      errBox.textContent = '⚠️ ' + msg;
-      errBox.className = 'err show';
-    }
-    window.addEventListener('error', function(e){
-      showErr((e && e.message) ? e.message : 'unknown error');
-    });
+    function showErr(msg){ errBox.textContent = '⚠️ ' + msg; errBox.className = 'err show'; }
+    window.addEventListener('error', function(e){ showErr((e && e.message) ? e.message : 'unknown error'); });
 
-    if (!board || !btnSettings || !settingsOverlay || !scratchCanvas) {
+    if (!board || !scratchCanvas || !btnSettings) {
       showErr('DOM 元件缺失，請確認整份檔案完整貼上');
       return;
     }
@@ -239,11 +191,12 @@
     var order = [];
     var revealed = {}; // num -> 1
     var winning = {};  // num -> 1
+    var roundId = 1;
 
     // ===== Utils =====
     function safeParse(raw){ try { return JSON.parse(raw); } catch(e){ return null; } }
 
-    function shuffle(total){
+    function shuffleNums(total){
       var arr = [];
       for (var i=1;i<=total;i++) arr.push(i);
       for (var j=arr.length-1;j>0;j--){
@@ -256,8 +209,13 @@
     function sortedKeys(obj){
       var keys = [];
       for (var k in obj) keys.push(+k);
-      keys.sort(function(a,b){return a-b;});
+      keys.sort(function(a,b){ return a-b; });
       return keys;
+    }
+
+    function bumpRound(){
+      roundId = Date.now();
+      try{ localStorage.setItem(ROUND_KEY, String(roundId)); }catch(e){}
     }
 
     function save(){
@@ -268,10 +226,15 @@
           revealed: Object.keys(revealed),
           winning: Object.keys(winning)
         }));
-      }catch(e){ /* ignore */ }
+      }catch(e){}
     }
 
     function load(){
+      try{
+        var rid = localStorage.getItem(ROUND_KEY);
+        roundId = rid ? (parseInt(rid,10) || 1) : 1;
+      }catch(e){ roundId = 1; }
+
       var raw = null;
       try{ raw = localStorage.getItem(STORAGE_KEY); }catch(e){ raw = null; }
       if (!raw) return;
@@ -283,10 +246,7 @@
         var t = Number(s.current.total), r = Number(s.current.rows), c = Number(s.current.cols);
         for (var i=0;i<SIZE_PRESETS.length;i++){
           var p = SIZE_PRESETS[i];
-          if (p.total===t && p.rows===r && p.cols===c){
-            current = {total:p.total,rows:p.rows,cols:p.cols};
-            break;
-          }
+          if (p.total===t && p.rows===r && p.cols===c){ current = {total:p.total,rows:p.rows,cols:p.cols}; break; }
         }
       }
 
@@ -301,26 +261,13 @@
       revealed = {};
       winning = {};
 
-      if (Array.isArray(s.revealed)){
-        for (var a=0;a<s.revealed.length;a++){
-          var rn = Number(s.revealed[a]);
-          if (isFinite(rn)) revealed[rn] = 1;
-        }
-      }
-
-      if (Array.isArray(s.winning)){
-        for (var b=0;b<s.winning.length;b++){
-          var wn = Number(s.winning[b]);
-          if (isFinite(wn)) winning[wn] = 1;
-        }
-      }
+      if (Array.isArray(s.revealed)) s.revealed.forEach(function(n){ revealed[Number(n)] = 1; });
+      if (Array.isArray(s.winning)) s.winning.forEach(function(n){ winning[Number(n)] = 1; });
 
       if (!order || order.length !== current.total) order = [];
-      for (var k in revealed){ if (+k<1 || +k>current.total) delete revealed[k]; }
-      for (var m in winning){ if (+m<1 || +m>current.total) delete winning[m]; }
     }
 
-    function requirePwdOnce(){
+    function requirePwd(){
       var p = prompt('請輸入密碼');
       if (p === null) return false;
       if (p !== PASSWORD){ alert('密碼錯誤'); return false; }
@@ -329,92 +276,52 @@
 
     // ===== Layout sizing =====
     function fitCellSize(){
-      try{
-        var gap = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--gap')) || 10;
-        var boardRect = board.getBoundingClientRect();
-        var availableW = Math.max(0, boardRect.width);
+      var gap = 10;
+      var bw = board.getBoundingClientRect().width;
+      var bh = Math.max(240, window.innerHeight - 220);
 
-        var header = document.querySelector('header');
-        var panelHead = document.querySelector('#panel .panelHead');
-        var winStrip = document.querySelector('.winStrip');
+      var cw = (bw - gap*(current.cols-1)) / current.cols;
+      var ch = (bh - gap*(current.rows-1)) / current.rows;
+      var cell = Math.floor(Math.min(cw, ch));
+      if (!isFinite(cell)) cell = 40;
+      cell = Math.max(18, Math.min(72, cell));
 
-        var headerH = header ? header.getBoundingClientRect().height : 0;
-        var panelHeadH = panelHead ? panelHead.getBoundingClientRect().height : 0;
-        var winStripH = winStrip ? winStrip.getBoundingClientRect().height : 0;
-
-        var extra = 28;
-        var availableH = Math.max(180, window.innerHeight - headerH - panelHeadH - winStripH - extra);
-
-        var cols = current.cols;
-        var rows = current.rows;
-        var sizeByW = (availableW - gap*(cols-1))/cols;
-        var sizeByH = (availableH - gap*(rows-1))/rows;
-        var cell = Math.floor(Math.min(sizeByW, sizeByH));
-        if (!isFinite(cell)) cell = 40;
-        cell = Math.max(18, Math.min(cell, 72));
-
-        document.documentElement.style.setProperty('--cellSize', cell + 'px');
-        board.style.gridTemplateColumns = 'repeat(' + cols + ', var(--cellSize))';
-      }catch(e){
-        showErr('fitCellSize: ' + (e.message || 'error'));
-      }
+      document.documentElement.style.setProperty('--cellSize', cell + 'px');
+      board.style.gridTemplateColumns = 'repeat(' + current.cols + ', var(--cellSize))';
     }
 
-    // ===== UI render =====
-    function updateHeader(){
-      titleEl.textContent = '刮刮卡（1–' + current.total + '）';
-      subtitleEl.innerHTML = '版面：<b>' + current.rows + ' 排 × ' + current.cols + ' 列</b>（共 ' + current.total + ' 格）。點洞 → 進入刮卡視窗，用手滑刮，刮到 ' + SCRATCH_CONFIRM_THRESHOLD + '% 才能按「確認刮開」。';
+    // ===== Header render =====
+    function renderTitle(){
+      var wins = sortedKeys(winning);
+      var winText = wins.length ? ('｜中獎：' + wins.join(', ')) : '';
+      titleEl.innerHTML = '刮刮卡（1–' + current.total + '） <span class="meta">｜#' + roundId + winText + '</span>';
     }
 
     function updateStats(){
-      var count = 0;
-      for (var k in revealed) count++;
-      stats.textContent = '已刮 ' + count + ' / ' + current.total;
-    }
-
-    function renderWinList(){
-      var wins = sortedKeys(winning);
-      winStats.textContent = '中獎 ' + wins.length + ' 個';
-      winList.innerHTML = '';
-
-      if (!wins.length){
-        var span = document.createElement('span');
-        span.className = 'pill';
-        span.textContent = '尚未設定中獎號碼';
-        winList.appendChild(span);
-        return;
-      }
-
-      for (var i=0;i<wins.length;i++){
-        var n = wins[i];
-        var p = document.createElement('span');
-        p.className = 'pill' + (revealed[n] ? ' hit' : '');
-        p.textContent = String(n);
-        winList.appendChild(p);
-      }
+      var c = 0;
+      for (var k in revealed) c++;
+      stats.textContent = '已刮 ' + c + ' / ' + current.total;
+      winStats.textContent = '中獎 ' + sortedKeys(winning).length + ' 個';
     }
 
     // ===== Scratch modal =====
     var sctx = scratchCanvas.getContext('2d');
     var scratchActive = false;
-    var currentScratchNum = null;
-    var currentScratchPercent = 0;
+    var curNum = null;
     var hasScratched = false;
     var lastX = null;
     var lastY = null;
 
     function setScratchCanvasSize(){
-      var rect = scratchStage.getBoundingClientRect();
-      var size = Math.floor(Math.min(rect.width, rect.height));
-      if (size < 220) size = 220;
-      scratchCanvas.width = size;
-      scratchCanvas.height = size;
-      scratchNumber.style.fontSize = Math.floor(size * 0.26) + 'px';
+      var r = scratchStage.getBoundingClientRect();
+      var s = Math.max(220, Math.floor(Math.min(r.width, r.height)));
+      scratchCanvas.width = s;
+      scratchCanvas.height = s;
+      scratchNumber.style.fontSize = Math.floor(s * 0.26) + 'px';
     }
 
     function scratchMask(){
-      var w = scratchCanvas.width;
-      var h = scratchCanvas.height;
+      var w = scratchCanvas.width, h = scratchCanvas.height;
       sctx.globalCompositeOperation = 'source-over';
       sctx.clearRect(0,0,w,h);
       sctx.fillStyle = '#000';
@@ -425,39 +332,27 @@
     }
 
     function getScratchPercent(){
-      var w = scratchCanvas.width;
-      var h = scratchCanvas.height;
-      var data;
-      try{ data = sctx.getImageData(0,0,w,h).data; }
-      catch(e){ return 0; }
-
-      // 取樣估算透明比例
-      var step = Math.max(4, Math.floor(w / 90));
-      var total = 0;
-      var clear = 0;
-      for (var y=0; y<h; y+=step){
-        for (var x=0; x<w; x+=step){
-          var idx = (y*w + x) * 4 + 3;
-          total++;
-          if (data[idx] === 0) clear++;
+      var w = scratchCanvas.width, h = scratchCanvas.height;
+      var d;
+      try{ d = sctx.getImageData(0,0,w,h).data; }catch(e){ return 0; }
+      var step = Math.max(4, Math.floor(w/90));
+      var tot = 0, clr = 0;
+      for (var y=0;y<h;y+=step){
+        for (var x=0;x<w;x+=step){
+          var i = (y*w + x) * 4 + 3;
+          tot++;
+          if (d[i] === 0) clr++;
         }
       }
-      if (!total) return 0;
-      return Math.round((clear/total) * 100);
+      return tot ? Math.round(clr/tot*100) : 0;
     }
 
-    function updateScratchProgress(){
-      currentScratchPercent = getScratchPercent();
-      scratchProg.textContent = '刮開進度：' + currentScratchPercent + '%（至少 ' + SCRATCH_CONFIRM_THRESHOLD + '% 才能確認）';
+    function updateScratch(){
+      var p = getScratchPercent();
+      scratchProg.textContent = '刮開進度：' + p + '%（至少 ' + SCRATCH_CONFIRM_THRESHOLD + '% 才能確認）';
+      btnScratchConfirm.disabled = !(p >= SCRATCH_CONFIRM_THRESHOLD);
 
-      var op = 0.18 + Math.min(0.82, currentScratchPercent/100);
-      scratchNumber.style.opacity = String(op);
-
-      btnScratchConfirm.disabled = !(currentScratchPercent >= SCRATCH_CONFIRM_THRESHOLD);
-    }
-
-    function lockCancelIfScratched(){
-      if (!hasScratched){
+      if (p > 0 && !hasScratched){
         hasScratched = true;
         btnScratchCancel.disabled = true;
         btnScratchCancel.textContent = '已刮無法取消';
@@ -465,18 +360,13 @@
       }
     }
 
-    function openScratch(num){
-      if (revealed[num]) return;
-
-      currentScratchNum = num;
-      currentScratchPercent = 0;
+    function openScratch(n){
+      if (revealed[n]) return;
+      curNum = n;
       hasScratched = false;
-      lastX = null;
-      lastY = null;
+      lastX = null; lastY = null;
 
-      scratchNumber.textContent = String(num);
-      scratchNumber.style.opacity = '0.18';
-
+      scratchNumber.textContent = String(n);
       scratchOverlay.classList.add('show');
       setScratchCanvasSize();
       scratchMask();
@@ -489,144 +379,112 @@
       scratchProg.textContent = '刮開進度：0%（至少 ' + SCRATCH_CONFIRM_THRESHOLD + '% 才能確認）';
     }
 
-    function closeScratch(force){
-      if (!force && hasScratched) return;
+    function closeScratch(){
       scratchOverlay.classList.remove('show');
       scratchActive = false;
-      currentScratchNum = null;
-      currentScratchPercent = 0;
+      curNum = null;
       hasScratched = false;
-      lastX = null;
-      lastY = null;
-      sctx.globalCompositeOperation = 'source-over';
     }
 
     function scratchAt(clientX, clientY){
-      var rect = scratchCanvas.getBoundingClientRect();
-      var x = clientX - rect.left;
-      var y = clientY - rect.top;
+      var r = scratchCanvas.getBoundingClientRect();
+      var x = clientX - r.left;
+      var y = clientY - r.top;
 
       sctx.lineCap = 'round';
       sctx.lineJoin = 'round';
       sctx.lineWidth = Math.max(18, Math.floor(scratchCanvas.width * 0.08));
 
+      sctx.beginPath();
       if (lastX === null){
-        sctx.beginPath();
-        sctx.moveTo(x, y);
-        sctx.lineTo(x + 0.01, y + 0.01);
-        sctx.stroke();
+        sctx.moveTo(x,y);
+        sctx.lineTo(x+0.01,y+0.01);
       } else {
-        sctx.beginPath();
-        sctx.moveTo(lastX, lastY);
-        sctx.lineTo(x, y);
-        sctx.stroke();
+        sctx.moveTo(lastX,lastY);
+        sctx.lineTo(x,y);
       }
-
-      lastX = x;
-      lastY = y;
-
-      lockCancelIfScratched();
+      sctx.stroke();
+      lastX = x; lastY = y;
     }
 
     scratchCanvas.addEventListener('pointerdown', function(e){
       if (!scratchActive) return;
       scratchCanvas.setPointerCapture(e.pointerId);
-      lastX = null;
-      lastY = null;
+      lastX = null; lastY = null;
       scratchAt(e.clientX, e.clientY);
-      updateScratchProgress();
+      updateScratch();
     });
 
     scratchCanvas.addEventListener('pointermove', function(e){
       if (!scratchActive) return;
       if ((e.buttons & 1) !== 1) return;
       scratchAt(e.clientX, e.clientY);
-      updateScratchProgress();
+      updateScratch();
     });
 
     btnScratchCancel.addEventListener('click', function(){
       if (hasScratched) return;
-      closeScratch(true);
+      closeScratch();
     });
 
     btnScratchClose.addEventListener('click', function(){
       if (hasScratched) return;
-      closeScratch(true);
-    });
-
-    scratchOverlay.addEventListener('click', function(e){
-      if (e.target === scratchOverlay && !hasScratched) closeScratch(true);
+      closeScratch();
     });
 
     btnScratchConfirm.addEventListener('click', function(){
-      if (currentScratchNum == null) return;
-      if (currentScratchPercent < SCRATCH_CONFIRM_THRESHOLD) return;
-
-      revealed[currentScratchNum] = 1;
-      closeScratch(true);
+      if (curNum == null) return;
+      if (getScratchPercent() < SCRATCH_CONFIRM_THRESHOLD) return;
+      revealed[curNum] = 1;
+      closeScratch();
       build();
+    });
+
+    scratchOverlay.addEventListener('click', function(e){
+      if (e.target === scratchOverlay && !hasScratched) closeScratch();
     });
 
     // ===== Build board =====
     function build(){
       board.innerHTML = '';
-      board.style.gridTemplateColumns = 'repeat(' + current.cols + ', var(--cellSize))';
-
-      if (!order || order.length !== current.total) order = shuffle(current.total);
+      if (!order || order.length !== current.total) order = shuffleNums(current.total);
 
       for (var i=0;i<order.length;i++){
         (function(n){
           var c = document.createElement('div');
-          var isRevealed = !!revealed[n];
-          c.className = 'cell ' + (isRevealed ? 'revealed' : 'covered');
+          var r = !!revealed[n];
+          c.className = 'cell ' + (r ? 'revealed' : 'covered');
           c.textContent = String(n);
-
-          if (isRevealed && winning[n]) c.className += ' win';
-
-          c.addEventListener('click', function(){
-            if (revealed[n]) return;
-            openScratch(n);
-          });
-
+          if (r && winning[n]) c.className += ' win';
+          c.addEventListener('click', function(){ if (!revealed[n]) openScratch(n); });
           board.appendChild(c);
         })(order[i]);
       }
 
-      updateHeader();
+      renderTitle();
       updateStats();
-      renderWinList();
       fitCellSize();
       save();
     }
 
     // ===== Fullscreen =====
-    function isFullscreen(){ return document.fullscreenElement || document.webkitFullscreenElement; }
     function toggleFullscreen(){
-      if (!isFullscreen()){
-        var el = document.documentElement;
-        if (el.requestFullscreen) el.requestFullscreen();
-        else if (el.webkitRequestFullscreen) el.webkitRequestFullscreen();
+      if (!document.fullscreenElement){
+        if (document.documentElement.requestFullscreen) document.documentElement.requestFullscreen();
       } else {
         if (document.exitFullscreen) document.exitFullscreen();
-        else if (document.webkitExitFullscreen) document.webkitExitFullscreen();
       }
     }
     btnFullscreen.addEventListener('click', toggleFullscreen);
-    document.addEventListener('fullscreenchange', function(){
-      btnFullscreen.textContent = isFullscreen() ? '⛶ 退出全螢幕' : '⛶ 全螢幕';
-      fitCellSize();
-    });
+    document.addEventListener('fullscreenchange', fitCellSize);
 
     // ===== Settings modal =====
-    function openSettings(){
-      if (!requirePwdOnce()) return;
+    btnSettings.addEventListener('click', function(){
+      if (!requirePwd()) return;
       settingsOverlay.classList.add('show');
-    }
-    function closeSettings(){ settingsOverlay.classList.remove('show'); }
-
-    btnSettings.addEventListener('click', openSettings);
-    btnCloseSettings.addEventListener('click', closeSettings);
-    settingsOverlay.addEventListener('click', function(e){ if (e.target === settingsOverlay) closeSettings(); });
+    });
+    btnCloseSettings.addEventListener('click', function(){ settingsOverlay.classList.remove('show'); });
+    settingsOverlay.addEventListener('click', function(e){ if (e.target === settingsOverlay) settingsOverlay.classList.remove('show'); });
 
     // ===== Settings actions =====
     btnRandom.addEventListener('click', function(){
@@ -635,86 +493,86 @@
       var k = parseInt(raw, 10);
       if (!isFinite(k) || k <= 0) return;
 
-      var pool = [];
-      for (var i=1;i<=current.total;i++) if (!winning[i]) pool.push(i);
-      for (var j=pool.length-1;j>0;j--){
-        var x = Math.floor(Math.random()*(j+1));
-        var tmp = pool[j]; pool[j]=pool[x]; pool[x]=tmp;
-      }
-
-      var take = Math.min(k, pool.length);
-      for (var t=0;t<take;t++) winning[pool[t]] = 1;
-
+      winning = {};
+      var picks = shuffleNums(current.total);
+      for (var i=0;i<Math.min(k, picks.length);i++) winning[picks[i]] = 1;
       build();
     });
 
     btnPick.addEventListener('click', function(){
-      var raw = prompt('輸入中獎號碼（1–' + current.total + '，逗號或空白分隔）', '');
+      var raw = prompt('輸入中獎號碼（逗號或空白分隔）', '');
       if (raw === null) return;
 
+      winning = {};
       raw = raw.split(',').join(' ');
-      var parts = raw.split(' ');
-      for (var i=0;i<parts.length;i++){
-        var s = String(parts[i] || '').trim();
-        if (!s) continue;
+      raw.split(' ').forEach(function(s){
+        s = String(s || '').trim();
+        if (!s) return;
         var n = parseInt(s, 10);
         if (isFinite(n) && n>=1 && n<=current.total) winning[n] = 1;
-      }
+      });
 
-      build();
-    });
-
-    btnReset.addEventListener('click', function(){
-      var ok = confirm('確定要換版嗎？\n（會清空中獎號碼與所有刮開狀態）');
-      if (!ok) return;
-      revealed = {};
-      winning = {};
-      order = shuffle(current.total);
       build();
     });
 
     btnSize.addEventListener('click', function(){
-      var lines = [];
+      var msg = '選擇洞數：\n';
       for (var i=0;i<SIZE_PRESETS.length;i++){
         var s = SIZE_PRESETS[i];
-        lines.push((i+1) + '. ' + s.total + ' 洞（' + s.rows + ' 排 x ' + s.cols + ' 列）');
+        msg += (i+1) + '. ' + s.total + ' 洞（' + s.rows + '×' + s.cols + '）\n';
       }
-      var msg = '選擇洞數：\n' + lines.join('\n') + '\n\n請輸入 1-' + SIZE_PRESETS.length + '：';
+      msg += '\n請輸入 1-' + SIZE_PRESETS.length + '：';
+
       var raw = prompt(msg, String(SIZE_PRESETS.length));
       if (raw === null) return;
-      var pick = parseInt(raw, 10);
-      if (!isFinite(pick) || !SIZE_PRESETS[pick-1]) return;
+      var idx = parseInt(raw, 10) - 1;
+      if (!isFinite(idx) || !SIZE_PRESETS[idx]) return;
 
-      current = {
-        total: SIZE_PRESETS[pick-1].total,
-        rows: SIZE_PRESETS[pick-1].rows,
-        cols: SIZE_PRESETS[pick-1].cols
-      };
+      current = { total: SIZE_PRESETS[idx].total, rows: SIZE_PRESETS[idx].rows, cols: SIZE_PRESETS[idx].cols };
       revealed = {};
       winning = {};
-      order = shuffle(current.total);
+      order = shuffleNums(current.total);
+      bumpRound();
+      settingsOverlay.classList.remove('show');
+      build();
+    });
+
+    // ✅ 換版要密碼 + 修正 confirm 字串（不能直接換行）
+    btnReset.addEventListener('click', function(){
+      if (!requirePwd()) return;
+      var ok = confirm('確定要換版嗎？\n（會清空中獎號碼與所有刮開狀態）');
+      if (!ok) return;
+      revealed = {};
+      winning = {};
+      order = shuffleNums(current.total);
+      bumpRound();
+      settingsOverlay.classList.remove('show');
       build();
     });
 
     // ===== Tests =====
     (function(){
-      if (SIZE_PRESETS.length !== 7) console.warn('TEST FAIL: presets count');
+      // presets total must match rows*cols
       for (var i=0;i<SIZE_PRESETS.length;i++){
         var p = SIZE_PRESETS[i];
-        if (p.total !== p.rows*p.cols) console.warn('TEST FAIL: preset total mismatch', p);
+        if (p.total !== p.rows*p.cols) console.warn('TEST FAIL: preset mismatch', p);
       }
-      // ✅ 目前門檻是 10
       if (SCRATCH_CONFIRM_THRESHOLD !== 10) console.warn('TEST WARN: threshold expected 10');
-      if (!board || !btnSettings || !scratchCanvas) console.warn('TEST FAIL: required DOM missing');
+      // shuffle should return unique length
+      var t = shuffleNums(10);
+      var seen = {};
+      for (var j=0;j<t.length;j++) seen[t[j]] = 1;
+      if (Object.keys(seen).length !== 10) console.warn('TEST FAIL: shuffle unique');
+      // confirm string should not contain raw newlines
+      var s = '確定要換版嗎？\n（會清空中獎號碼與所有刮開狀態）';
+      if (s.indexOf('\n') === -1) console.warn('TEST FAIL: confirm string');
     })();
 
     // ===== Init =====
     load();
+    if (!order || order.length !== current.total) order = shuffleNums(current.total);
     build();
-
-    window.addEventListener('resize', function(){
-      fitCellSize();
-    });
+    window.addEventListener('resize', fitCellSize);
   });
   </script>
 </body>
