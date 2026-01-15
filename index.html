@@ -64,7 +64,7 @@
 <body>
   <div class="wrap">
     <header>
-      <h1 id="title">刮刮卡NAN（1–160）</h1>
+      <h1 id="title">刮刮卡（1–160）</h1>
       <div class="controls">
         <button id="btnFullscreen" type="button">⛶ 全螢幕</button>
         <button class="primary" id="btnSettings" type="button">⚙️ 設定</button>
@@ -73,7 +73,7 @@
 
     <section class="panel" id="panel">
       <div class="panelHead">
-        <div class="label">刮刮卡 <span class="stats" id="stats">已刮 0 / 160</span></div>
+        <div class="label">刮卡版面 <span class="stats" id="stats">已刮 0 / 160</span></div>
         <div class="stats" id="winStats">中獎 0 個</div>
       </div>
       <div class="board" id="board"></div>
@@ -89,10 +89,10 @@
       </div>
       <div class="modalBody">
         <div class="grid">
-          <button class="primary" id="btnRandom" type="button">🎲 隨機選號</button>
-          <button class="primary" id="btnPick" type="button">🧷 指定選號</button>
-          <button class="primary" id="btnSize" type="button">🧩 更換洞數</button>
-          <button class="danger" id="btnReset" type="button">🔁 換版</button>
+          <button class="primary" id="btnRandom" type="button">🎲 隨機選號（設定中獎）</button>
+          <button class="primary" id="btnPick" type="button">🧷 指定選號（設定中獎）</button>
+          <button class="primary" id="btnSize" type="button">🧩 更換洞數（清空）</button>
+          <button class="danger" id="btnReset" type="button">🔁 換版（清空）</button>
         </div>
       </div>
     </div>
@@ -136,7 +136,8 @@
     });
 
     // ===== 基本設定 =====
-    var PASSWORD = '911021';
+    var PASSWORD = '1234';
+    var EMAIL_TO = 'ian911021ian@gmail.com'; // 換版後寄出「答案」草稿（mailto，需要你手動按送出）
     var STORAGE_KEY = 'scratchcard_state_v11';
     var ROUND_KEY = 'scratchcard_round_v11';
     var SCRATCH_CONFIRM_THRESHOLD = 10; // %
@@ -216,6 +217,40 @@
     function bumpRound(){
       roundId = Date.now();
       try{ localStorage.setItem(ROUND_KEY, String(roundId)); }catch(e){}
+    }
+
+    // ===== Email draft (方案A：開啟郵件草稿) =====
+    function buildAnswerText(){
+      var lines = [];
+      lines.push('刮刮卡答案');
+      lines.push('序號：#' + roundId);
+      lines.push('洞數：' + current.total + '（' + current.rows + '×' + current.cols + '）');
+      lines.push('時間：' + new Date(roundId).toLocaleString());
+      lines.push('');
+      lines.push('【格子排列】');
+      for (var r=0; r<current.rows; r++){
+        var row = [];
+        for (var c=0; c<current.cols; c++){
+          var idx = r*current.cols + c;
+          row.push(String(order[idx]).padStart(3,' '));
+        }
+        lines.push(row.join(' '));
+      }
+      lines.push('');
+      lines.push('【逗號清單】');
+      lines.push(order.join(','));
+      // ✅ 重要：不要把真正的換行塞進引號裡，避免語法中斷
+      return lines.join('\n');
+    }
+
+    function openMailDraft(){
+      if (!EMAIL_TO) return;
+      var subject = '刮刮卡答案 #' + roundId + '（' + current.total + '）';
+      var body = buildAnswerText();
+      var url = 'mailto:' + encodeURIComponent(EMAIL_TO)
+        + '?subject=' + encodeURIComponent(subject)
+        + '&body=' + encodeURIComponent(body);
+      window.location.href = url;
     }
 
     function save(){
@@ -537,7 +572,7 @@
       build();
     });
 
-    // ✅ 換版要密碼 + 修正 confirm 字串（不能直接換行）
+    // ✅ 換版要密碼 + confirm 字串不可直接換行
     btnReset.addEventListener('click', function(){
       if (!requirePwd()) return;
       var ok = confirm('確定要換版嗎？\n（會清空中獎號碼與所有刮開狀態）');
@@ -548,6 +583,8 @@
       bumpRound();
       settingsOverlay.classList.remove('show');
       build();
+      // 換版完成後：開啟寄信草稿（方案A）
+      openMailDraft();
     });
 
     // ===== Tests =====
@@ -558,14 +595,25 @@
         if (p.total !== p.rows*p.cols) console.warn('TEST FAIL: preset mismatch', p);
       }
       if (SCRATCH_CONFIRM_THRESHOLD !== 10) console.warn('TEST WARN: threshold expected 10');
+
       // shuffle should return unique length
       var t = shuffleNums(10);
       var seen = {};
       for (var j=0;j<t.length;j++) seen[t[j]] = 1;
       if (Object.keys(seen).length !== 10) console.warn('TEST FAIL: shuffle unique');
-      // confirm string should not contain raw newlines
-      var s = '確定要換版嗎？\n（會清空中獎號碼與所有刮開狀態）';
-      if (s.indexOf('\n') === -1) console.warn('TEST FAIL: confirm string');
+
+      // buildAnswerText join must be a literal "\\n" (no raw newlines in quotes)
+      var testLines = ['a','b','c'];
+      var joined = testLines.join('\\n');
+      if (joined !== 'a\\nb\\nc') console.warn('TEST FAIL: join newline');
+
+      // confirm should include a literal \n escape
+      var s = '確定要換版嗎？\\n（會清空中獎號碼與所有刮開狀態）';
+      if (s.indexOf('\\n') === -1) console.warn('TEST FAIL: confirm string escape');
+
+      // mailto should start with mailto:
+      var dummyUrl = 'mailto:' + encodeURIComponent('x@y.com') + '?subject=' + encodeURIComponent('t') + '&body=' + encodeURIComponent('b');
+      if (dummyUrl.indexOf('mailto:') !== 0) console.warn('TEST FAIL: mailto format');
     })();
 
     // ===== Init =====
